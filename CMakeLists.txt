@@ -100,6 +100,9 @@ find_package(SQLite3 REQUIRED)
 find_package(Git)
 find_package(Asn1c REQUIRED)
 find_package(ZLIB)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+
+include_directories(${JSONCPP_INCLUDE_DIRS})
 
 if(NOT AKTUALIZR_VERSION)
     if (EXISTS ${PROJECT_SOURCE_DIR}/VERSION)
@@ -321,7 +324,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 ############### BUILD RULES
 include_directories(${PROJECT_SOURCE_DIR}/src/libaktualizr)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include)
-include_directories(${PROJECT_SOURCE_DIR}/third_party/jsoncpp)
+include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${LIBOSTREE_INCLUDE_DIRS})
 include_directories(${SQLITE3_INCLUDE_DIRS})
@@ -330,9 +333,6 @@ include_directories(${sodium_INCLUDE_DIR})
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${CURL_INCLUDE_DIR})
 include_directories(${LibArchive_INCLUDE_DIR})
-
-set_source_files_properties(third_party/jsoncpp/jsoncpp.cpp PROPERTIES COMPILE_FLAGS -w)
-add_library(jsoncpp OBJECT third_party/jsoncpp/jsoncpp.cpp)
 
 # General packaging configuration
 set(CPACK_GENERATOR "DEB")
@@ -367,6 +367,7 @@ set (AKTUALIZR_EXTERNAL_LIBS
     ${CURL_LIBRARIES}
     ${OPENSSL_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
+    ${JSONCPP_LIBRARIES}
     ${sodium_LIBRARY_RELEASE}
     ${LIBOSTREE_LIBRARIES}
     ${SQLITE3_LIBRARIES}

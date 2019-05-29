@@ -3,7 +3,6 @@ add_executable(aktualizr-cert-provider main.cc
     $<TARGET_OBJECTS:bootstrap>
     $<TARGET_OBJECTS:config>
     $<TARGET_OBJECTS:crypto>
-    $<TARGET_OBJECTS:jsoncpp>
     $<TARGET_OBJECTS:http>
     $<TARGET_OBJECTS:logging>
     $<TARGET_OBJECTS:utilities>)
@@ -14,6 +13,7 @@ target_link_libraries(aktualizr-cert-provider
     ${CMAKE_THREAD_LIBS_INIT}
     ${Boost_SYSTEM_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${JSONCPP_LIBRARIES}
     ${LibArchive_LIBRARIES}
     ${LIBP11_LIBRARIES}
     ${CURL_LIBRARIES}

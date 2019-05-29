@@ -1,4 +1,3 @@
-include_directories("${PROJECT_SOURCE_DIR}/src/libaktualizr/third_party/jsoncpp")
 set(SOTA_TOOLS_LIB_SRC
     authenticate.cc
     check.cc
@@ -31,6 +30,7 @@ set(GARAGE_PUSH_SRCS
 set(SOTA_TOOLS_EXTERNAL_LIBS
     ${Boost_SYSTEM_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${JSONCPP_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
     ${LibArchive_LIBRARIES}
     ${CURL_LIBRARIES}

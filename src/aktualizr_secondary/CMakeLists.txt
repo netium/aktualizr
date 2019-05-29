@@ -11,7 +11,6 @@ add_library(aktualizr_secondary_static_lib STATIC
     ${AKTUALIZR_SECONDARY_LIB_SRC}
     $<TARGET_OBJECTS:bootloader>
     $<TARGET_OBJECTS:crypto>
-    $<TARGET_OBJECTS:jsoncpp>
     $<TARGET_OBJECTS:package_manager>
     $<TARGET_OBJECTS:utilities>
     $<TARGET_OBJECTS:storage>
