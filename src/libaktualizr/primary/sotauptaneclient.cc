@@ -28,6 +28,7 @@ static void report_progress_cb(event::Channel *channel, const Uptane::Target &ta
 std::shared_ptr<SotaUptaneClient> SotaUptaneClient::newDefaultClient(
     Config &config_in, std::shared_ptr<INvStorage> storage_in, std::shared_ptr<event::Channel> events_channel_in) {
   std::shared_ptr<HttpClient> http_client_in = std::make_shared<HttpClient>();
+  http_client_in->setLogging(true);
   std::shared_ptr<Bootloader> bootloader_in = std::make_shared<Bootloader>(config_in.bootloader, *storage_in);
   std::shared_ptr<ReportQueue> report_queue_in = std::make_shared<ReportQueue>(config_in, http_client_in);
 

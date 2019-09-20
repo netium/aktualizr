@@ -33,6 +33,10 @@ class HttpFake : public HttpInterface {
 
   virtual ~HttpFake() {}
 
+  virtual void setLogging(bool /*logging_in*/) {}
+  virtual bool getLogging() { return false; }
+  virtual HttpResponse postString(const std::string& /*url*/, const std::string& /*data*/) { return HttpResponse(); }
+
   void setCerts(const std::string &ca, CryptoSource ca_source, const std::string &cert, CryptoSource cert_source,
                 const std::string &pkey, CryptoSource pkey_source) override {
     (void)ca;

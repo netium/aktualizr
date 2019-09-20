@@ -33,6 +33,8 @@ class Aktualizr {
    */
   void Initialize();
 
+  std::shared_ptr<HttpInterface> GetHttp();
+
   /**
    * Asynchronously run aktualizr indefinitely until Shutdown is called.
    * @return Empty std::future object

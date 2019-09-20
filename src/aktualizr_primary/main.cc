@@ -132,6 +132,10 @@ int main(int argc, char *argv[]) {
 
     aktualizr.Initialize();
 
+#ifdef STREAM_LOGGING
+    logger_set_http(config.provision.server, aktualizr.GetHttp());
+#endif
+
     std::string run_mode;
     if (commandline_map.count("run-mode") != 0) {
       run_mode = commandline_map["run-mode"].as<std::string>();

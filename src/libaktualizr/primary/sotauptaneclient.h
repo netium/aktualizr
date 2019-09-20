@@ -66,6 +66,8 @@ class SotaUptaneClient {
   bool checkImagesMetaOffline();
   data::InstallationResult PackageInstall(const Uptane::Target &target);
 
+  std::shared_ptr<HttpInterface> getHttp() { return http; }
+
  protected:
   void addSecondary(const std::shared_ptr<Uptane::SecondaryInterface> &sec);
 

@@ -30,8 +30,11 @@ class HttpClient : public HttpInterface {
   HttpClient(const std::vector<std::string> *extra_headers = nullptr);
   HttpClient(const HttpClient & /*curl_in*/);
   ~HttpClient() override;
+  void setLogging(bool logging_in) override { logging = logging_in; }
+  bool getLogging() override { return logging; }
   HttpResponse get(const std::string &url, int64_t maxsize) override;
   HttpResponse post(const std::string &url, const Json::Value &data) override;
+  HttpResponse postString(const std::string& url, const std::string& data) override;
   HttpResponse put(const std::string &url, const Json::Value &data) override;
 
   HttpResponse download(const std::string &url, curl_write_callback write_cb, curl_xferinfo_callback progress_cb,
@@ -74,5 +77,6 @@ class HttpClient : public HttpInterface {
   }
   bool pkcs11_key{false};
   bool pkcs11_cert{false};
+  bool logging;
 };
 #endif

@@ -63,6 +63,8 @@ HttpClient::HttpClient(const std::vector<std::string>* extra_headers) {
   }
   curlEasySetoptWrapper(curl, CURLOPT_HTTPHEADER, headers);
   curlEasySetoptWrapper(curl, CURLOPT_USERAGENT, Utils::getUserAgent());
+
+  logging = false;
 }
 
 HttpClient::HttpClient(const HttpClient& curl_in) : pkcs11_key(curl_in.pkcs11_key), pkcs11_cert(curl_in.pkcs11_key) {
@@ -83,6 +85,8 @@ HttpClient::HttpClient(const HttpClient& curl_in) : pkcs11_key(curl_in.pkcs11_ke
     headers = tmp;
     inlist = inlist->next;
   }
+
+  logging = false;
 }
 
 CurlGlobalInitWrapper HttpClient::manageCurlGlobalInit_{};
@@ -117,7 +121,8 @@ HttpResponse HttpClient::get(const std::string& url, int64_t maxsize) {
   }
   curlEasySetoptWrapper(curl_get, CURLOPT_LOW_SPEED_TIME, speed_limit_time_interval_);
   curlEasySetoptWrapper(curl_get, CURLOPT_LOW_SPEED_LIMIT, speed_limit_bytes_per_sec_);
-  LOG_DEBUG << "GET " << url;
+  if (logging)
+    LOG_DEBUG << "GET " << url;
   HttpResponse response = perform(curl_get, RETRY_TIMES, maxsize);
   curl_easy_cleanup(curl_get);
   return response;
@@ -164,13 +169,26 @@ void HttpClient::setCerts(const std::string& ca, CryptoSource ca_source, const s
   pkcs11_key = (pkey_source == CryptoSource::kPkcs11);
 }
 
+HttpResponse HttpClient::postString(const std::string& url, const std::string& data) {
+  CURL* curl_post = Utils::curlDupHandleWrapper(curl, pkcs11_key);
+  curlEasySetoptWrapper(curl_post, CURLOPT_URL, url.c_str());
+  curlEasySetoptWrapper(curl_post, CURLOPT_POST, 1);
+  curlEasySetoptWrapper(curl_post, CURLOPT_POSTFIELDS, data.c_str());
+  if (logging)
+    LOG_TRACE << "post request body:" << data;
+  auto result = perform(curl_post, RETRY_TIMES, HttpInterface::kPostRespLimit);
+  curl_easy_cleanup(curl_post);
+  return result;
+}
+
 HttpResponse HttpClient::post(const std::string& url, const Json::Value& data) {
   CURL* curl_post = Utils::curlDupHandleWrapper(curl, pkcs11_key);
   curlEasySetoptWrapper(curl_post, CURLOPT_URL, url.c_str());
   curlEasySetoptWrapper(curl_post, CURLOPT_POST, 1);
   std::string data_str = Json::FastWriter().write(data);
   curlEasySetoptWrapper(curl_post, CURLOPT_POSTFIELDS, data_str.c_str());
-  LOG_TRACE << "post request body:" << data;
+  if (logging)
+    LOG_TRACE << "post request body:" << data;
   auto result = perform(curl_post, RETRY_TIMES, HttpInterface::kPostRespLimit);
   curl_easy_cleanup(curl_post);
   return result;
@@ -182,7 +200,8 @@ HttpResponse HttpClient::put(const std::string& url, const Json::Value& data) {
   std::string data_str = Json::FastWriter().write(data);
   curlEasySetoptWrapper(curl_put, CURLOPT_POSTFIELDS, data_str.c_str());
   curlEasySetoptWrapper(curl_put, CURLOPT_CUSTOMREQUEST, "PUT");
-  LOG_TRACE << "put request body:" << data;
+  if (logging)
+    LOG_TRACE << "put request body:" << data;
   HttpResponse result = perform(curl_put, RETRY_TIMES, HttpInterface::kPutRespLimit);
   curl_easy_cleanup(curl_put);
   return result;
@@ -197,17 +216,21 @@ HttpResponse HttpClient::perform(CURL* curl_handler, int retry_times, int64_t si
   curl_easy_getinfo(curl_handler, CURLINFO_RESPONSE_CODE, &http_code);
   HttpResponse response(response_arg.out, http_code, result, (result != CURLE_OK) ? curl_easy_strerror(result) : "");
   if (response.curl_code != CURLE_OK || response.http_status_code >= 500) {
-    std::ostringstream error_message;
-    error_message << "curl error " << response.curl_code << " (http code " << response.http_status_code
-                  << "): " << response.error_message;
-    LOG_ERROR << error_message.str();
+    if (logging) {
+      std::ostringstream error_message;
+      error_message << "curl error " << response.curl_code << " (http code " << response.http_status_code
+                    << "): " << response.error_message;
+      LOG_ERROR << error_message.str();
+    }
     if (retry_times != 0) {
       sleep(1);
       response = perform(curl_handler, --retry_times, size_limit);
     }
   }
-  LOG_TRACE << "response http code: " << response.http_status_code;
-  LOG_TRACE << "response: " << response.body;
+  if (logging) {
+    LOG_TRACE << "response http code: " << response.http_status_code;
+    LOG_TRACE << "response: " << response.body;
+  }
   return response;
 }
 

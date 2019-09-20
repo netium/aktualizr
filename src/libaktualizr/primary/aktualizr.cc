@@ -51,6 +51,10 @@ void Aktualizr::Initialize() {
   api_queue_.run();
 }
 
+std::shared_ptr<HttpInterface> Aktualizr::GetHttp() {
+  return uptane_client_->getHttp();
+}
+
 bool Aktualizr::UptaneCycle() {
   result::UpdateCheck update_result = CheckUpdates().get();
   if (update_result.updates.empty()) {

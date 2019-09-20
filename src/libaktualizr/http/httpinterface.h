@@ -38,8 +38,11 @@ class HttpInterface {
  public:
   HttpInterface() = default;
   virtual ~HttpInterface() = default;
+  virtual void setLogging(bool logging_in) = 0;
+  virtual bool getLogging() = 0;
   virtual HttpResponse get(const std::string &url, int64_t maxsize) = 0;
   virtual HttpResponse post(const std::string &url, const Json::Value &data) = 0;
+  virtual HttpResponse postString(const std::string& url, const std::string& data) = 0;
   virtual HttpResponse put(const std::string &url, const Json::Value &data) = 0;
 
   virtual HttpResponse download(const std::string &url, curl_write_callback write_cb,
