@@ -79,7 +79,7 @@ void RequestPool::LoopListen() {
   // https://curl.haxx.se/libcurl/c/curl_multi_fdset.html
   CURLMcode mc;
   // Poll for IO
-  fd_set fdread, fdwrite, fdexcept;
+  fd_set fdread, fdwrite, fdexcept;  // NOLINT(readability-isolate-declaration)
   int maxfd = 0;
   FD_ZERO(&fdread);
   FD_ZERO(&fdwrite);

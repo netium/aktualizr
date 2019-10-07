@@ -16,6 +16,8 @@
 #include "logging/logging.h"
 #include "utilities/utils.h"
 
+const char *remote = "aktualizr-remote";
+
 static void aktualizr_progress_cb(OstreeAsyncProgress *progress, gpointer data) {
   auto *mt = static_cast<PullMetaStruct *>(data);
   if (mt->token != nullptr && !mt->token->canContinue()) {

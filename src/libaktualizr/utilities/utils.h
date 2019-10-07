@@ -174,12 +174,12 @@ struct _Unique_if {
 };
 
 template <class T>
-struct _Unique_if<T[]> {
-  using _Unknown_bound = std::unique_ptr<T[]>;
+struct _Unique_if<T[]> { // NOLINT
+  using _Unknown_bound = std::unique_ptr<T[]>; // NOLINT
 };
 
 template <class T, size_t N>
-struct _Unique_if<T[N]> {
+struct _Unique_if<T[N]> {  // NOLINT
   using _Known_bound = void;
 };
 

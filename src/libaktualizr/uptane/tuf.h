@@ -37,7 +37,7 @@ class RepositoryType {
     }
   }
   operator int() const { return static_cast<int>(type_); }
-  operator const std::string() const { return toString(); }
+  operator std::string() const { return toString(); }
   Type type_;
   std::string toString() const {
     if (type_ == RepositoryType::Type::kDirector) {
@@ -250,7 +250,7 @@ class Target {
   bool MatchHash(const Hash &hash) const;
 
   bool IsForSecondary(const EcuSerial &ecuIdentifier) const {
-    return (std::find_if(ecus_.cbegin(), ecus_.cend(), [&ecuIdentifier](std::pair<EcuSerial, HardwareIdentifier> pair) {
+    return (std::find_if(ecus_.cbegin(), ecus_.cend(), [&ecuIdentifier](const std::pair<EcuSerial, HardwareIdentifier> &pair) {
               return pair.first == ecuIdentifier;
             }) != ecus_.cend());
   };

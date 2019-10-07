@@ -33,7 +33,7 @@
 #include "aktualizr_version.h"
 #include "logging/logging.h"
 
-const char *adverbs[] = {
+std::array<const char*, 132> adverbs = {
     "adorable", "acidic",     "ample",        "aromatic",   "artistic", "attractive", "basic",    "beautiful",
     "best",     "blissful",   "bubbly",       "celebrated", "cheap",    "chilly",     "cloudy",   "colorful",
     "colossal", "complete",   "conventional", "costly",     "creamy",   "crisp",      "dense",    "double",
@@ -52,7 +52,7 @@ const char *adverbs[] = {
     "uniform",  "unusual",    "valuable",     "vast",       "warm",     "wavy",       "wet",      "whole",
     "wide",     "wild",       "wooden",       "young"};
 
-const char *names[] = {"Allerlei",
+std::array<const char*, 128> names = {"Allerlei",
                        "Apfelkuchen",
                        "Backerbsen",
                        "Baumkuchen",
@@ -258,13 +258,13 @@ Json::Value Utils::parseJSONFile(const boost::filesystem::path &filename) {
 std::string Utils::genPrettyName() {
   std::random_device urandom;
 
-  std::uniform_int_distribution<> adverbs_dist(0, (sizeof(adverbs) / sizeof(char *)) - 1);
-  std::uniform_int_distribution<> nouns_dist(0, (sizeof(names) / sizeof(char *)) - 1);
+  std::uniform_int_distribution<> adverbs_dist(0, adverbs.size() - 1);
+  std::uniform_int_distribution<> nouns_dist(0, names.size() - 1);
   std::uniform_int_distribution<> digits(0, 999);
   std::stringstream pretty_name;
-  pretty_name << adverbs[adverbs_dist(urandom)];
+  pretty_name << adverbs.at(static_cast<size_t>(adverbs_dist(urandom)));
   pretty_name << "-";
-  pretty_name << names[nouns_dist(urandom)];
+  pretty_name << names.at(static_cast<size_t>(nouns_dist(urandom)));
   pretty_name << "-";
   pretty_name << digits(urandom);
   std::string res = pretty_name.str();
@@ -654,7 +654,8 @@ boost::filesystem::path Utils::absolutePath(const boost::filesystem::path &root,
 std::vector<boost::filesystem::path> Utils::getDirEntriesByExt(const boost::filesystem::path &dir_path,
                                                                const std::string &ext) {
   std::vector<boost::filesystem::path> entries;
-  boost::filesystem::directory_iterator entryItEnd, entryIt(dir_path);
+  boost::filesystem::directory_iterator entryIt(dir_path);
+  boost::filesystem::directory_iterator entryItEnd;
   for (; entryIt != entryItEnd; ++entryIt) {
     auto &entry_path = entryIt->path();
     if (!boost::filesystem::is_directory(*entryIt) && entry_path.extension().string() == ext) {

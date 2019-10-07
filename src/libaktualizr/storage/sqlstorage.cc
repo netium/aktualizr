@@ -263,7 +263,7 @@ bool SQLStorage::loadTlsCreds(std::string* ca, std::string* cert, std::string* p
     return false;
   }
 
-  std::string ca_v, cert_v, pkey_v;
+  std::string ca_v, cert_v, pkey_v;  // NOLINT(readability-isolate-declaration)
   try {
     ca_v = statement.get_result_col_str(0).value();
     cert_v = statement.get_result_col_str(1).value();

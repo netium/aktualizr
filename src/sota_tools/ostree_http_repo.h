@@ -14,7 +14,7 @@ class OSTreeHttpRepo : public OSTreeRepo {
 
   bool LooksValid() const override;
   OSTreeRef GetRef(const std::string& refname) const override;
-  const boost::filesystem::path root() const override { return root_.Path(); }
+  boost::filesystem::path root() const override { return root_.Path(); }
 
  private:
   bool FetchObject(const boost::filesystem::path& path) const override;

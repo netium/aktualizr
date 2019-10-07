@@ -124,7 +124,7 @@ bool AktualizrSecondary::sendFirmwareResp(const std::shared_ptr<std::string>& fi
   if (target_->IsOstree()) {
     // this is the ostree specific case
     try {
-      std::string ca, cert, pkey, server_url;
+      std::string ca, cert, pkey, server_url;  // NOLINT(readability-isolate-declaration)
       extractCredentialsArchive(*firmware, &ca, &cert, &pkey, &treehub_server);
       keys_.loadKeys(&ca, &cert, &pkey);
       boost::trim(server_url);

@@ -51,7 +51,7 @@ PublicKey::PublicKey(Json::Value uptane_json) {
 
 PublicKey::PublicKey(std::string value, KeyType type) : value_(std::move(value)), type_(type) {
   if (Crypto::IsRsaKeyType(type)) {
-    if (type != Crypto::IdentifyRSAKeyType(value)) {
+    if (type != Crypto::IdentifyRSAKeyType(value_)) {
       std::logic_error("RSA key length is incorrect");
     }
   }

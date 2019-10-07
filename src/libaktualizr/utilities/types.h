@@ -86,7 +86,7 @@ class TimeStamp {
  public:
   static TimeStamp Now();
   /** An invalid TimeStamp */
-  TimeStamp() { ; }
+  TimeStamp() = default;
   explicit TimeStamp(std::string rfc3339);
   bool IsExpiredAt(const TimeStamp& now) const;
   bool IsValid() const;
@@ -98,7 +98,7 @@ class TimeStamp {
 
   class InvalidTimeStamp : public std::domain_error {
    public:
-    InvalidTimeStamp() : std::domain_error("invalid timestamp") {}
+    InvalidTimeStamp() : std::domain_error("invalid timestamp") {} ;
     ~InvalidTimeStamp() noexcept override = default;
   };
 

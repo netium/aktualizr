@@ -126,6 +126,7 @@ bool DockerAppManager::fetchTarget(const Uptane::Target &target, Uptane::Fetcher
   LOG_INFO << "Looking for DockerApps to fetch";
   auto cb = [this, &fetcher, &keys, progress_cb, token](const std::string &app, const Uptane::Target &app_target) {
     LOG_INFO << "Fetching " << app << " -> " << app_target;
+    // NOLINTNEXTLINE(bugprone-parent-virtual-call)
     return PackageManagerInterface::fetchTarget(app_target, fetcher, keys, progress_cb, token);
   };
   return iterate_apps(target, cb);
