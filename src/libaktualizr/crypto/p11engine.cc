@@ -54,7 +54,7 @@ P11SlotsWrapper::P11SlotsWrapper(PKCS11_ctx_st* ctx_in) {
 }
 
 P11SlotsWrapper::~P11SlotsWrapper() {
-  if ((wslots_ != nullptr) && (nslots != 0u)) {
+  if ((wslots_ != nullptr) && (nslots != 0U)) {
     PKCS11_release_all_slots(ctx, wslots_, nslots);
   }
 }
@@ -168,7 +168,7 @@ bool P11Engine::readUptanePublicKey(std::string* key_out) {
   if (config_.module.empty()) {
     return false;
   }
-  if ((config_.uptane_key_id.length() % 2) != 0u) {
+  if ((config_.uptane_key_id.length() % 2) != 0U) {
     return false;  // id is a hex string
   }
 
@@ -251,7 +251,7 @@ bool P11Engine::readTlsCert(std::string* cert_out) const {
   if (config_.module.empty()) {
     return false;
   }
-  if ((id.length() % 2) != 0u) {
+  if ((id.length() % 2) != 0U) {
     return false;  // id is a hex string
   }
 

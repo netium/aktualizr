@@ -67,14 +67,14 @@ int main(int argc, char **argv) {
       exit(EXIT_SUCCESS);
     }
 
-    if (vm.count("loglevel") == 0u) {
+    if (vm.count("loglevel") == 0U) {
       logger_set_enable(false);
     }
 
     AktualizrInfoConfig config(vm);
 
     bool readonly = true;
-    if (vm.count("allow-migrate") != 0u) {
+    if (vm.count("allow-migrate") != 0U) {
       readonly = false;
     }
 
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
       std::cout << "Couldn't load device ID" << std::endl;
     } else {
       // Early return if only printing device ID.
-      if (vm.count("name-only") != 0u) {
+      if (vm.count("name-only") != 0U) {
         std::cout << device_id << std::endl;
         return EXIT_SUCCESS;
       }
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
     has_metadata = has_metadata || storage->loadLatestRoot(&director_root, Uptane::RepositoryType::Director());
 
     // TLS credentials
-    if (vm.count("tls-creds") != 0u) {
+    if (vm.count("tls-creds") != 0U) {
       std::string ca;
       std::string cert;
       std::string pkey;
@@ -133,21 +133,21 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("tls-root-ca") != 0u) {
+    if (vm.count("tls-root-ca") != 0U) {
       std::string ca;
       storage->loadTlsCa(&ca);
       std::cout << ca << std::endl;
       cmd_trigger = true;
     }
 
-    if (vm.count("tls-cert") != 0u) {
+    if (vm.count("tls-cert") != 0U) {
       std::string cert;
       storage->loadTlsCert(&cert);
       std::cout << cert << std::endl;
       cmd_trigger = true;
     }
 
-    if (vm.count("tls-prv-key") != 0u) {
+    if (vm.count("tls-prv-key") != 0U) {
       std::string key;
       storage->loadTlsPkey(&key);
       std::cout << key << std::endl;
@@ -155,7 +155,7 @@ int main(int argc, char **argv) {
     }
 
     // ECU credentials
-    if (vm.count("ecu-keys") != 0u) {
+    if (vm.count("ecu-keys") != 0U) {
       std::string priv;
       std::string pub;
 
@@ -165,14 +165,14 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("ecu-pub-key") != 0u) {
+    if (vm.count("ecu-pub-key") != 0U) {
       std::string key;
       storage->loadPrimaryPublic(&key);
       std::cout << key << std::endl;
       return EXIT_SUCCESS;
     }
 
-    if (vm.count("ecu-prv-key") != 0u) {
+    if (vm.count("ecu-prv-key") != 0U) {
       std::string key;
       storage->loadPrimaryPrivate(&key);
       std::cout << key << std::endl;
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
 
     // An arguments which depend on metadata.
     std::string msg_metadata_fail = "Metadata is not available";
-    if (vm.count("images-root") != 0u) {
+    if (vm.count("images-root") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("images-target") != 0u) {
+    if (vm.count("images-target") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("delegation") != 0u) {
+    if (vm.count("delegation") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("director-root") != 0u) {
+    if (vm.count("director-root") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -221,7 +221,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("director-target") != 0u) {
+    if (vm.count("director-target") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("images-snapshot") != 0u) {
+    if (vm.count("images-snapshot") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
       cmd_trigger = true;
     }
 
-    if (vm.count("images-timestamp") != 0u) {
+    if (vm.count("images-timestamp") != 0U) {
       if (!has_metadata) {
         std::cout << msg_metadata_fail << std::endl;
       } else {
@@ -301,7 +301,7 @@ int main(int argc, char **argv) {
 
     std::vector<MisconfiguredEcu> misconfigured_ecus;
     storage->loadMisconfiguredEcus(&misconfigured_ecus);
-    if (misconfigured_ecus.size() != 0u) {
+    if (misconfigured_ecus.size() != 0U) {
       std::cout << "Removed or not registered ecus:" << std::endl;
       std::vector<MisconfiguredEcu>::const_iterator it;
       for (it = misconfigured_ecus.begin(); it != misconfigured_ecus.end(); ++it) {

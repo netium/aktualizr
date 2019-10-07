@@ -23,7 +23,7 @@ class KeyManager {
   std::string getCert() const;
   std::string getCa() const;
   std::string getCN() const;
-  bool isOk() const { return ((getPkey().size() != 0u) && (getCert().size() != 0u) && (getCa().size() != 0u)); }
+  bool isOk() const { return ((getPkey().size() != 0U) && (getCert().size() != 0U) && (getCa().size() != 0U)); }
   std::string generateUptaneKeyPair();
   KeyType getUptaneKeyType() const { return config_.uptane_key_type; }
   Json::Value signTuf(const Json::Value &in_data) const;

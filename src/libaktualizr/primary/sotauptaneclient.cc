@@ -865,7 +865,7 @@ result::Install SotaUptaneClient::uptaneInstall(const std::vector<Uptane::Target
   sendMetadataToEcus(updates);
 
   //   7 - send images to ECUs (deploy for OSTree)
-  if (primary_updates.size() != 0u) {
+  if (primary_updates.size() != 0U) {
     // assuming one OSTree OS per primary => there can be only one OSTree update
     Uptane::Target primary_update = primary_updates[0];
     primary_update.setCorrelationId(correlation_id);
