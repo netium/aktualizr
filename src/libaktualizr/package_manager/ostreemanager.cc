@@ -285,7 +285,7 @@ TargetStatus OstreeManager::verifyTargetInternal(const Uptane::Target &target) c
 Json::Value OstreeManager::getInstalledPackages() const {
   std::string packages_str = Utils::readFile(config.packages_file);
   std::vector<std::string> package_lines;
-  boost::split(package_lines, packages_str, boost::is_any_of("\n"));
+  boost::split(package_lines, packages_str, boost::is_any_of("\n"));  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
   Json::Value packages(Json::arrayValue);
   for (auto it = package_lines.begin(); it != package_lines.end(); ++it) {
     if (it->empty()) {

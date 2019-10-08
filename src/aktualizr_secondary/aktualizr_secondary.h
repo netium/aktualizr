@@ -26,6 +26,7 @@ class AktualizrSecondary : public AktualizrSecondaryInterface, private Aktualizr
   Json::Value getManifestResp() const;
   bool putMetadataResp(const Uptane::RawMetaPack& meta_pack);
   int32_t getRootVersionResp(bool director) const;
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   bool putRootResp(const std::string& root, bool director);
   bool sendFirmwareResp(const std::shared_ptr<std::string>& firmware);
 

@@ -8,7 +8,7 @@ class android_log_sink : public log::sinks::basic_sink_backend<log::sinks::synch
  public:
   explicit android_log_sink() {}
 
-  void consume(log::record_view const& rec) {
+  static void consume(log::record_view const& rec) {
     const auto& rec_message_attr = rec[log::aux::default_attribute_names::message()];
     int log_priority = android_LogPriority::ANDROID_LOG_VERBOSE +
                        rec[log::aux::default_attribute_names::severity()].extract_or_default(0);

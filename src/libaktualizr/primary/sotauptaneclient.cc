@@ -31,8 +31,8 @@ std::shared_ptr<SotaUptaneClient> SotaUptaneClient::newDefaultClient(
   std::shared_ptr<Bootloader> bootloader_in = std::make_shared<Bootloader>(config_in.bootloader, *storage_in);
   std::shared_ptr<ReportQueue> report_queue_in = std::make_shared<ReportQueue>(config_in, http_client_in);
 
-  return std::make_shared<SotaUptaneClient>(config_in, storage_in, http_client_in, bootloader_in, report_queue_in,
-                                            events_channel_in);
+  return std::make_shared<SotaUptaneClient>(config_in, std::move(storage_in), http_client_in, bootloader_in, report_queue_in,
+                                            std::move(events_channel_in));
 }
 
 SotaUptaneClient::SotaUptaneClient(Config &config_in, const std::shared_ptr<INvStorage> &storage_in,
@@ -600,7 +600,7 @@ std::pair<bool, Uptane::Target> SotaUptaneClient::downloadImage(const Uptane::Ta
 
   KeyManager keys(storage, config.keymanagerConfig());
   keys.loadKeys();
-  auto prog_cb = [this](const Uptane::Target &t, const std::string description, unsigned int progress) {
+  auto prog_cb = [this](const Uptane::Target &t, const std::string &description, unsigned int progress) {
     report_progress_cb(events_channel.get(), t, description, progress);
   };
 

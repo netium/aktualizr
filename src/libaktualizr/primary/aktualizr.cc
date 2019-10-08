@@ -20,7 +20,7 @@ Aktualizr::Aktualizr(Config &config) : config_(config) {
   uptane_client_ = SotaUptaneClient::newDefaultClient(config_, storage_, sig_);
 }
 
-Aktualizr::Aktualizr(Config &config, std::shared_ptr<INvStorage> storage_in, std::shared_ptr<HttpInterface> http_in)
+Aktualizr::Aktualizr(Config &config, std::shared_ptr<INvStorage> storage_in, const std::shared_ptr<HttpInterface> &http_in)
     : config_(config) {
   systemSetup();
   sig_ = make_shared<boost::signals2::signal<void(shared_ptr<event::BaseEvent>)>>();

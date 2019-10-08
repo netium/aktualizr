@@ -229,8 +229,8 @@ endif()
 add_custom_target(build_tests)
 
 # clang-check and clang-format
-find_program(CLANG_FORMAT NAMES clang-format-6.0)
-find_program(CLANG_TIDY NAMES clang-tidy-6.0)
+find_program(CLANG_FORMAT NAMES clang-format-8)
+find_program(CLANG_TIDY NAMES clang-tidy-9)
 
 if(CLANG_FORMAT)
     function(aktualizr_clang_format)

@@ -85,7 +85,7 @@ class ManagedSecondary : public Uptane::SecondaryInterface {
   void rawToMeta();
 
   // TODO: implement
-  void storeMetadata(const Uptane::RawMetaPack& meta_pack) { (void)meta_pack; }
+  static void storeMetadata(const Uptane::RawMetaPack& meta_pack) { (void)meta_pack; }
   bool loadMetadata(Uptane::RawMetaPack* meta_pack);
 };
 

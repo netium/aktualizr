@@ -52,6 +52,7 @@ class RateController {
   int max_concurrency_{1};
   clock::duration sleep_time_{0};
 
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   void CheckInvariants() const;
 };
 

@@ -81,9 +81,9 @@ void RequestPool::LoopListen() {
   // Poll for IO
   fd_set fdread, fdwrite, fdexcept;  // NOLINT(readability-isolate-declaration)
   int maxfd = 0;
-  FD_ZERO(&fdread);
-  FD_ZERO(&fdwrite);
-  FD_ZERO(&fdexcept);
+  FD_ZERO(&fdread);  // NOLINT
+  FD_ZERO(&fdwrite);  // NOLINT
+  FD_ZERO(&fdexcept);  // NOLINT
   long timeoutms = 0;  // NOLINT(google-runtime-int)
   mc = curl_multi_timeout(multi_, &timeoutms);
   if (mc != CURLM_OK) {
