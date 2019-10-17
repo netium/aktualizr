@@ -47,7 +47,7 @@ add_custom_target(check COMMAND CTEST_OUTPUT_ON_FAILURE=1 ${CMAKE_CTEST_COMMAND}
 # List of source files to run static analysis on. Automatically appended to by
 # add_aktualizr_test, but anything that doesn't use that must be manually added
 # to this list.
-set(TEST_SOURCES httpfake.h metafake.h test_utils.cc test_utils.h uptane_vector_tests.cc)
+set(TEST_SOURCES httpfake.h metafake.h test_utils.cc test_utils.h uptane_vector_tests.cc environment_setup.cc)
 
 
 include(CMakeParseArguments)
@@ -57,6 +57,18 @@ list(APPEND TEST_LIBS testutilities)
 
 add_library(ostree_mock SHARED ostree_mock.c)
 aktualizr_source_file_checks(ostree_mock.c)
+
+add_executable(test_environment_setup environment_setup.cc)
+target_link_libraries(test_environment_setup ${TEST_LIBS})
+target_include_directories(test_environment_setup PUBLIC
+    ${PROJECT_SOURCE_DIR}/src/uptane_generator
+    ${PROJECT_SOURCE_DIR}/tests)
+target_link_libraries(test_environment_setup aktualizr_static_lib ${TEST_LIBS})
+add_dependencies(build_tests test_environment_setup)
+
+add_test(NAME t_environment_setup COMMAND test_environment_setup
+    ${PROJECT_SOURCE_DIR}/tests/fake_http_server/fake_test_server.py)
+set_tests_properties(t_environment_setup PROPERTIES FIXTURES_SETUP test_http_client)
 
 # Setup coverage
 if(BUILD_WITH_CODE_COVERAGE)
