@@ -46,3 +46,6 @@ __pycache__/
 # QT Creator
 CMakeLists.txt.user
 /docs/ota-client-guide/modules/ROOT/pages/_junk
+
+# Rust automatically generated file
+Cargo.lock
