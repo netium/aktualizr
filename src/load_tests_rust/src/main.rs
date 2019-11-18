@@ -14,6 +14,8 @@ extern crate ini;
 use ini::Ini;
 extern crate rand;
 use rand::Rng;
+extern crate hdrhistogram;
+use hdrhistogram::Histogram;
 
 extern {
     fn Aktualizr_create_from_path(path: *const c_char) -> *const c_void;
@@ -34,11 +36,24 @@ fn main() -> io::Result<()> {
 
     if args.len() == 6 {
         let devices_count: u32 = args[4].parse().unwrap();
-        _provisioning(/*meta_dir*/&args[2], /*creds_path*/&args[3], devices_count, /*gateway*/&args[5], /*id_size*/16);
+
+        _provisioning(
+            /*meta_dir*/ &args[2],
+            /*creds_path*/ &args[3],
+            devices_count,
+            /*gateway*/ &args[5],
+            /*id_size*/ 16);
+        _check_updates(
+            /*meta_dir*/ &args[2],
+            /*attempts_count*/ 1,
+            /*print_statistics*/ false).expect("check_updates failed");
     }
 
     else if args.len() == 3 {
-        _check_updates(/*meta_dir*/&args[2]).expect("check_updates failed");
+        _check_updates(
+            /*meta_dir*/ &args[2],
+            /*attempts_count*/ 20,
+            /*print_statistics*/ true).expect("check_updates failed");
     }
 
     Ok(())
@@ -56,10 +71,12 @@ fn _generate_id(id_size: u32) -> String {
     return unique_id;
 }
 
-fn _provisioning(meta_path: &str, creds_path: &str, devices_count: u32, gateway: &str, id_size: u32) {
+fn _provisioning(meta_path: &str, creds_path: &str,
+    devices_count: u32, gateway: &str, id_size: u32) {
+
     println!("Provisions generation started");
 
-    for _x in 0..devices_count
+    for _device in 0..devices_count
     {
         let unique_id = _generate_id(id_size);
 
@@ -96,7 +113,9 @@ fn _provisioning(meta_path: &str, creds_path: &str, devices_count: u32, gateway:
     println!("Provisions generation completed");
 }
 
-fn _check_updates(meta_path: &str) -> io::Result<()> {
+fn _check_updates(meta_path: &str, attempts_count: u32,
+    print_statistics: bool) -> io::Result<()> {
+
     println!("Updates checking started");
 
     let path = Path::new(meta_path);
@@ -111,37 +130,86 @@ fn _check_updates(meta_path: &str) -> io::Result<()> {
             path.set_extension("toml");
             let config_path = CString::new(path.to_str().unwrap()).expect("CString::new failed");
 
-            let handle = thread::spawn(move || _worker(device_number, &config_path));
+            let handle = thread::spawn(move ||
+                _worker(device_number, &config_path, attempts_count, print_statistics));
             thread_handles.push(handle);
+
             device_number = device_number + 1;
         }
     }
 
+    let mut overall_hist =
+        Histogram::<u64>::new_with_bounds(1, 60 * 60 * 1000, 2).unwrap();
+    let mut overall_initial_hist = overall_hist.clone();
+
     for handle in thread_handles
     {
-        handle.join().unwrap();
+        let (initial_hist, hist) = handle.join().unwrap();
+
+        if print_statistics {
+            overall_hist.add(hist).expect("histogram.add failed");
+            overall_initial_hist.add(initial_hist).expect("histogram.add failed");
+        }
     }
+
+    if print_statistics {
+        println!("");
+        _print_statistics("initial histogram", overall_initial_hist);
+        println!("");
+        _print_statistics("performance histogram", overall_hist);
+        println!("");
+    }
+
     println!("Updates checking completed");
     Ok(())
 }
 
-fn _worker(device_number: u32, config_path: &CStr)
+fn _worker(device_number: u32, config_path: &CStr,
+    attempts_count: u32, calculate_statistics: bool)
+    -> (Histogram::<u64>, Histogram::<u64>)
 {
     let aktualizr_handle = unsafe { Aktualizr_create_from_path(config_path.as_ptr()) };
     let init_result = unsafe { Aktualizr_initialize(aktualizr_handle) };
-    println!("device_number {:2} initialization result = {}", device_number, init_result);
+    println!("device_number {:2}, initialization result = {}", device_number, init_result);
 
-    for _attempt in 0..10
+    let mut hist =
+        Histogram::<u64>::new_with_bounds(1, 10000, 2).expect("Histogram creation failed");
+    let mut initial_hist = hist.clone();
+
+    for _attempt in 0..attempts_count
     {
         let start = Instant::now();
         let updates = unsafe { Aktualizr_updates_check(aktualizr_handle) };
         let duration = start.elapsed();
-        println!("device_number {:2}, attempt {:2}, duration = {:?}",
-            device_number, _attempt, duration);
+        println!("device_number {:2}, attempt {:2}, duration = {:5?} ms",
+            device_number, _attempt, duration.as_millis() as u32);
+
+        if calculate_statistics
+        {
+            if  _attempt == 0 {
+                initial_hist.record(duration.as_millis() as u64).expect("Duration out of range");
+            }
+            else {
+                hist.record(duration.as_millis() as u64).expect("Duration out of range");
+            }
+        }
+
         unsafe { Aktualizr_updates_free(updates); }
 
         //thread::sleep(time::Duration::from_millis(3000));
     }
 
     unsafe { Aktualizr_destroy(aktualizr_handle) };
+
+    return (initial_hist, hist);
+}
+
+fn _print_statistics(histogram_name: &str, histogram: Histogram::<u64>)
+{
+    println!("# of {} samples: {}", histogram_name, histogram.len());
+    for percentile in (0 .. 110).step_by(10) {
+        println!("{:3?}'th percentile of {}: {:5} ms",
+            percentile, histogram_name,
+            histogram.value_at_quantile(percentile as f64 * 0.01));
+    }
 }
