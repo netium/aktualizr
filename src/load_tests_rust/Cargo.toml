@@ -11,5 +11,3 @@ rust-ini = "0.13.0"
 rand="0.7.2"
 hdrhistogram = "6.3.4"
 
-[build-dependencies]
-cmake = "0.1.31"

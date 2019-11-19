@@ -1,8 +1,8 @@
 use std::ffi::{CString, CStr};
 use std::ffi::c_void;
 use std::os::raw::c_char;
-//use std::time;
-use std::time::{Instant};
+use std::time;
+use std::time::Instant;
 use std::thread;
 use std::io;
 use std::fs::{self};
@@ -119,9 +119,13 @@ fn _check_updates(meta_path: &str, attempts_count: u32,
     println!("Updates checking started");
 
     let path = Path::new(meta_path);
+    let checking_start_time = Instant::now();
+    let histogram_upper_bound = 1500;
 
     let mut thread_handles = Vec::new();
     let mut device_number = 0;
+    let mut upper_bound_overflow = 0;
+
     if path.is_dir() {
         for entry in fs::read_dir(path)? {
             let entry = entry?;
@@ -131,7 +135,8 @@ fn _check_updates(meta_path: &str, attempts_count: u32,
             let config_path = CString::new(path.to_str().unwrap()).expect("CString::new failed");
 
             let handle = thread::spawn(move ||
-                _worker(device_number, &config_path, attempts_count, print_statistics));
+                _worker(device_number, &config_path, checking_start_time,
+                    attempts_count, print_statistics, histogram_upper_bound));
             thread_handles.push(handle);
 
             device_number = device_number + 1;
@@ -139,72 +144,105 @@ fn _check_updates(meta_path: &str, attempts_count: u32,
     }
 
     let mut overall_hist =
-        Histogram::<u64>::new_with_bounds(1, 60 * 60 * 1000, 2).unwrap();
+        Histogram::<u32>::new_with_bounds(1, histogram_upper_bound as u64, 2).unwrap();
     let mut overall_initial_hist = overall_hist.clone();
 
     for handle in thread_handles
     {
-        let (initial_hist, hist) = handle.join().unwrap();
+        let (hist, initial_duration, overflow) = handle.join().unwrap();
 
         if print_statistics {
+            if initial_duration > histogram_upper_bound {
+                upper_bound_overflow = initial_duration;
+            } else {
+                overall_initial_hist.record(initial_duration as u64).unwrap();
+            }
+
             overall_hist.add(hist).expect("histogram.add failed");
-            overall_initial_hist.add(initial_hist).expect("histogram.add failed");
+            if overflow > upper_bound_overflow {
+                upper_bound_overflow = overflow;
+            }
         }
     }
 
     if print_statistics {
         println!("");
+        println!("# of devices - {}", device_number);
         _print_statistics("initial histogram", overall_initial_hist);
         println!("");
+        println!("# of non-initial attempts - {}", (attempts_count - 1) * device_number);
         _print_statistics("performance histogram", overall_hist);
         println!("");
+        if upper_bound_overflow > 0 {
+            println!("Histogram overflow {}", upper_bound_overflow);
+        }
     }
 
     println!("Updates checking completed");
     Ok(())
 }
 
-fn _worker(device_number: u32, config_path: &CStr,
-    attempts_count: u32, calculate_statistics: bool)
-    -> (Histogram::<u64>, Histogram::<u64>)
+fn _worker(device_number: u32, config_path: &CStr, checking_start_time: Instant,
+    attempts_count: u32, calculate_statistics: bool, upper_bound: u32)
+    -> (Histogram::<u32>, u32, u32)
 {
     let aktualizr_handle = unsafe { Aktualizr_create_from_path(config_path.as_ptr()) };
     let init_result = unsafe { Aktualizr_initialize(aktualizr_handle) };
-    println!("device_number {:2}, initialization result = {}", device_number, init_result);
+    println!("device_number {:3}, initialization result = {}", device_number, init_result);
 
+    let mut upper_bound_overflow = 0;
+    let mut initial_duration = 0;
     let mut hist =
-        Histogram::<u64>::new_with_bounds(1, 10000, 2).expect("Histogram creation failed");
-    let mut initial_hist = hist.clone();
+        Histogram::<u32>::new_with_bounds(1, upper_bound as u64, 2).expect("Histogram creation failed");
 
     for _attempt in 0..attempts_count
     {
         let start = Instant::now();
         let updates = unsafe { Aktualizr_updates_check(aktualizr_handle) };
         let duration = start.elapsed();
-        println!("device_number {:2}, attempt {:2}, duration = {:5?} ms",
-            device_number, _attempt, duration.as_millis() as u32);
+        let duration_u32 = duration.as_millis() as u32;
+        println!("device_number {:3}, attempt {:2}, duration = {:5?} ms",
+            device_number, _attempt, duration_u32);
 
         if calculate_statistics
         {
-            if  _attempt == 0 {
-                initial_hist.record(duration.as_millis() as u64).expect("Duration out of range");
-            }
-            else {
-                hist.record(duration.as_millis() as u64).expect("Duration out of range");
+            if _attempt == 0 {
+                initial_duration = duration_u32;
+            } else {
+                if duration_u32 > upper_bound {
+                    upper_bound_overflow = duration_u32;
+                } else {
+                    hist.record(duration_u32 as u64).unwrap();
+                }
             }
         }
 
         unsafe { Aktualizr_updates_free(updates); }
 
-        //thread::sleep(time::Duration::from_millis(3000));
+        if attempts_count == 1 {
+            break;
+        }
+
+        let time_between_updates_check_calls = 2000 /*ms*/;
+        let mut end_of_sleep = time_between_updates_check_calls * (_attempt + 1);
+        let time_from_checking_start = checking_start_time.elapsed().as_millis() as u32;
+
+        if time_from_checking_start > end_of_sleep {
+            //Aktualizr_updates_check call was too slow
+            let delay = time_from_checking_start - end_of_sleep;
+            end_of_sleep = end_of_sleep + time_between_updates_check_calls *
+                ( 1 + delay / time_between_updates_check_calls );
+        }
+        let remained_pause = end_of_sleep - time_from_checking_start;
+        thread::sleep(time::Duration::from_millis(remained_pause as u64));
     }
 
     unsafe { Aktualizr_destroy(aktualizr_handle) };
 
-    return (initial_hist, hist);
+    return (hist, initial_duration, upper_bound_overflow);
 }
 
-fn _print_statistics(histogram_name: &str, histogram: Histogram::<u64>)
+fn _print_statistics(histogram_name: &str, histogram: Histogram::<u32>)
 {
     println!("# of {} samples: {}", histogram_name, histogram.len());
     for percentile in (0 .. 110).step_by(10) {
