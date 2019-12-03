@@ -62,6 +62,98 @@ static Primary::VirtualSecondaryConfig virtual_configuration(const boost::filesy
 }
 
 /*
+ * Initialize -> CheckUpdates -> no updates -> no further action or events.
+ */
+TEST(Aktualizr, CheckNoUpdates) {
+  TemporaryDirectory temp_dir;
+  auto http = std::make_shared<HttpFake>(temp_dir.Path(), "noupdates", fake_meta_dir);
+  Config conf = UptaneTestCommon::makeTestConfig(temp_dir, http->tls_server);
+
+  auto storage = INvStorage::newStorage(conf.storage);
+  UptaneTestCommon::TestAktualizr aktualizr(conf, storage, http);
+
+  struct {
+    size_t num_events{0};
+    std::future<void> future;
+    std::promise<void> promise;
+  } ev_state;
+  ev_state.future = ev_state.promise.get_future();
+
+  auto f_cb = [&ev_state](const std::shared_ptr<event::BaseEvent>& event) {
+    if (event->isTypeOf<event::DownloadProgressReport>()) {
+      return;
+    }
+    LOG_INFO << "Got " << event->variant;
+    switch (ev_state.num_events) {
+      case 0: {
+        EXPECT_EQ(event->variant, "UpdateCheckComplete");
+        const auto targets_event = dynamic_cast<event::UpdateCheckComplete*>(event.get());
+        EXPECT_EQ(targets_event->result.ecus_count, 0);
+        EXPECT_EQ(targets_event->result.updates.size(), 0);
+        EXPECT_EQ(targets_event->result.status, result::UpdateStatus::kNoUpdatesAvailable);
+        break;
+      }
+      case 1: {
+        EXPECT_EQ(event->variant, "UpdateCheckComplete");
+        const auto targets_event = dynamic_cast<event::UpdateCheckComplete*>(event.get());
+        EXPECT_EQ(targets_event->result.ecus_count, 0);
+        EXPECT_EQ(targets_event->result.updates.size(), 0);
+        EXPECT_EQ(targets_event->result.status, result::UpdateStatus::kNoUpdatesAvailable);
+        ev_state.promise.set_value();
+        break;
+      }
+      case 5:
+        // Don't let the test run indefinitely!
+        FAIL() << "Unexpected events!";
+      default:
+        std::cout << "event #" << ev_state.num_events << " is: " << event->variant << "\n";
+        EXPECT_EQ(event->variant, "");
+    }
+    ++ev_state.num_events;
+  };
+
+  boost::signals2::connection conn = aktualizr.SetSignalHandler(f_cb);
+
+  aktualizr.Initialize();
+
+  result::UpdateCheck result = aktualizr.CheckUpdates().get();
+  EXPECT_EQ(result.ecus_count, 0);
+  EXPECT_EQ(result.updates.size(), 0);
+  EXPECT_EQ(result.status, result::UpdateStatus::kNoUpdatesAvailable);
+  // hmmm this should return nothing.
+  boost::optional<Uptane::Target> current_version;
+  storage->loadPrimaryInstalledVersions(&current_version, nullptr);
+  EXPECT_FALSE(!!current_version);
+  verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
+
+  // Fetch twice so that we can check for a second UpdateCheckComplete and
+  // guarantee that nothing unexpected happened after the first fetch.
+  result = aktualizr.CheckUpdates().get();
+  EXPECT_EQ(result.ecus_count, 0);
+  EXPECT_EQ(result.updates.size(), 0);
+  EXPECT_EQ(result.status, result::UpdateStatus::kNoUpdatesAvailable);
+  // hmmm this should return nothing.
+  storage->loadPrimaryInstalledVersions(&current_version, nullptr);
+  EXPECT_FALSE(!!current_version);
+  verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
+
+  // hmmm this should return nothing.
+  storage->loadPrimaryInstalledVersions(&current_version, nullptr);
+  EXPECT_FALSE(!!current_version);
+  verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
+
+  auto status = ev_state.future.wait_for(std::chrono::seconds(20));
+  if (status != std::future_status::ready) {
+    FAIL() << "Timed out waiting for metadata to be fetched.";
+  }
+
+  // hmmm this should return nothing.
+  storage->loadPrimaryInstalledVersions(&current_version, nullptr);
+  EXPECT_FALSE(!!current_version);
+  verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
+}
+
+/*
  * Initialize -> UptaneCycle -> no updates -> no further action or events.
  */
 TEST(Aktualizr, FullNoUpdates) {
@@ -123,6 +215,10 @@ TEST(Aktualizr, FullNoUpdates) {
     FAIL() << "Timed out waiting for metadata to be fetched.";
   }
 
+  // hmmm this should return nothing.
+  boost::optional<Uptane::Target> current_version;
+  storage->loadPrimaryInstalledVersions(&current_version, nullptr);
+  EXPECT_FALSE(!!current_version);
   verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
 }
 
@@ -1219,79 +1315,6 @@ TEST(Aktualizr, FullMultipleSecondaries) {
   EXPECT_TRUE(manifest["installation_report"]["report"]["items"][0]["result"]["success"].asBool());
   EXPECT_EQ(manifest["installation_report"]["report"]["items"][1]["ecu"].asString(), "sec_serial2");
   EXPECT_TRUE(manifest["installation_report"]["report"]["items"][1]["result"]["success"].asBool());
-}
-
-/*
- * Initialize -> CheckUpdates -> no updates -> no further action or events.
- */
-TEST(Aktualizr, CheckNoUpdates) {
-  TemporaryDirectory temp_dir;
-  auto http = std::make_shared<HttpFake>(temp_dir.Path(), "noupdates", fake_meta_dir);
-  Config conf = UptaneTestCommon::makeTestConfig(temp_dir, http->tls_server);
-
-  auto storage = INvStorage::newStorage(conf.storage);
-  UptaneTestCommon::TestAktualizr aktualizr(conf, storage, http);
-
-  struct {
-    size_t num_events{0};
-    std::future<void> future;
-    std::promise<void> promise;
-  } ev_state;
-  ev_state.future = ev_state.promise.get_future();
-
-  auto f_cb = [&ev_state](const std::shared_ptr<event::BaseEvent>& event) {
-    if (event->isTypeOf<event::DownloadProgressReport>()) {
-      return;
-    }
-    LOG_INFO << "Got " << event->variant;
-    switch (ev_state.num_events) {
-      case 0: {
-        EXPECT_EQ(event->variant, "UpdateCheckComplete");
-        const auto targets_event = dynamic_cast<event::UpdateCheckComplete*>(event.get());
-        EXPECT_EQ(targets_event->result.ecus_count, 0);
-        EXPECT_EQ(targets_event->result.updates.size(), 0);
-        EXPECT_EQ(targets_event->result.status, result::UpdateStatus::kNoUpdatesAvailable);
-        break;
-      }
-      case 1: {
-        EXPECT_EQ(event->variant, "UpdateCheckComplete");
-        const auto targets_event = dynamic_cast<event::UpdateCheckComplete*>(event.get());
-        EXPECT_EQ(targets_event->result.ecus_count, 0);
-        EXPECT_EQ(targets_event->result.updates.size(), 0);
-        EXPECT_EQ(targets_event->result.status, result::UpdateStatus::kNoUpdatesAvailable);
-        ev_state.promise.set_value();
-        break;
-      }
-      case 5:
-        // Don't let the test run indefinitely!
-        FAIL() << "Unexpected events!";
-      default:
-        std::cout << "event #" << ev_state.num_events << " is: " << event->variant << "\n";
-        EXPECT_EQ(event->variant, "");
-    }
-    ++ev_state.num_events;
-  };
-
-  boost::signals2::connection conn = aktualizr.SetSignalHandler(f_cb);
-
-  aktualizr.Initialize();
-  result::UpdateCheck result = aktualizr.CheckUpdates().get();
-  EXPECT_EQ(result.ecus_count, 0);
-  EXPECT_EQ(result.updates.size(), 0);
-  EXPECT_EQ(result.status, result::UpdateStatus::kNoUpdatesAvailable);
-  // Fetch twice so that we can check for a second UpdateCheckComplete and
-  // guarantee that nothing unexpected happened after the first fetch.
-  result = aktualizr.CheckUpdates().get();
-  EXPECT_EQ(result.ecus_count, 0);
-  EXPECT_EQ(result.updates.size(), 0);
-  EXPECT_EQ(result.status, result::UpdateStatus::kNoUpdatesAvailable);
-
-  auto status = ev_state.future.wait_for(std::chrono::seconds(20));
-  if (status != std::future_status::ready) {
-    FAIL() << "Timed out waiting for metadata to be fetched.";
-  }
-
-  verifyNothingInstalled(aktualizr.uptane_client()->AssembleManifest());
 }
 
 /*
