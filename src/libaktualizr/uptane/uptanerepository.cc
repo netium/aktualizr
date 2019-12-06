@@ -47,8 +47,8 @@ bool RepositoryCommon::verifyRoot(const std::string& root_raw) {
 
 void RepositoryCommon::resetRoot() { root = Root(Root::Policy::kAcceptAll); }
 
-Json::Value Manifest::signManifest(const Json::Value& manifest_unsigned) const {
-  Json::Value manifest = keys_.signTuf(manifest_unsigned);
+Json::Value Manifest::signManifest(const Json::Value &manifest_unsigned, const KeyManager &keymanager) const {
+  Json::Value manifest = keymanager.signTuf(manifest_unsigned);
   return manifest;
 }
 

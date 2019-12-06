@@ -5,7 +5,6 @@
 
 #include "json/json.h"
 
-#include "config/config.h"
 #include "crypto/crypto.h"
 #include "crypto/keymanager.h"
 #include "fetcher.h"
@@ -16,10 +15,9 @@ namespace Uptane {
 
 class Manifest {
  public:
-  Manifest(const Config &config_in, std::shared_ptr<INvStorage> storage_in)
-      : storage_{std::move(storage_in)}, keys_(storage_, config_in.keymanagerConfig()) {}
+  Manifest(std::shared_ptr<INvStorage> storage_in) : storage_{std::move(storage_in)} {}
 
-  Json::Value signManifest(const Json::Value &manifest_unsigned) const;
+  Json::Value signManifest(const Json::Value &manifest_unsigned, const KeyManager &keymanager) const;
 
   void setPrimaryEcuSerialHwId(const std::pair<Uptane::EcuSerial, Uptane::HardwareIdentifier> &serials) {
     primary_ecu_serial = serials.first;
@@ -32,7 +30,6 @@ class Manifest {
   Uptane::EcuSerial primary_ecu_serial{Uptane::EcuSerial::Unknown()};
   Uptane::HardwareIdentifier primary_hardware_id{Uptane::HardwareIdentifier::Unknown()};
   std::shared_ptr<INvStorage> storage_;
-  KeyManager keys_;
 };
 
 class RepositoryCommon {

@@ -197,7 +197,8 @@ Json::Value SotaUptaneClient::AssembleManifest() {
     primary_ecu_version["report_counter"] = std::to_string(ecu_cnt[0].second + 1);
     storage->saveEcuReportCounter(ecu_cnt[0].first, ecu_cnt[0].second + 1);
   }
-  version_manifest[primary_ecu_serial.ToString()] = uptane_manifest.signManifest(primary_ecu_version);
+  KeyManager keys(storage, config.keymanagerConfig());
+  version_manifest[primary_ecu_serial.ToString()] = uptane_manifest.signManifest(primary_ecu_version, keys);
 
   for (auto it = secondaries.begin(); it != secondaries.end(); it++) {
     Json::Value secmanifest = it->second->getManifest();
@@ -952,7 +953,8 @@ bool SotaUptaneClient::putManifestSimple(const Json::Value &custom) {
   if (custom != Json::nullValue) {
     manifest["custom"] = custom;
   }
-  auto signed_manifest = uptane_manifest.signManifest(manifest);
+  KeyManager keys(storage, config.keymanagerConfig());
+  auto signed_manifest = uptane_manifest.signManifest(manifest, keys);
   HttpResponse response = http->put(config.uptane.director_server + "/manifest", signed_manifest);
   if (response.isOk()) {
     storage->clearInstallationResults();

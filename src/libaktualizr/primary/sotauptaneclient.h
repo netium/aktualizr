@@ -33,7 +33,7 @@ class SotaUptaneClient {
   SotaUptaneClient(Config &config_in, const std::shared_ptr<INvStorage> &storage_in,
                    std::shared_ptr<HttpInterface> http_in, std::shared_ptr<event::Channel> events_channel_in)
       : config(config_in),
-        uptane_manifest(config, storage_in),
+        uptane_manifest(storage_in),
         storage(storage_in),
         http(std::move(http_in)),
         package_manager_(PackageManagerFactory::makePackageManager(config.pacman, config.bootloader, storage, http)),

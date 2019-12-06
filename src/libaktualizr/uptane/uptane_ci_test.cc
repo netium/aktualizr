@@ -34,7 +34,7 @@ TEST(UptaneCI, ProvisionAndPutManifest) {
   config.postUpdateValues();  // re-run copy of urls
 
   auto storage = INvStorage::newStorage(config.storage);
-  Uptane::Manifest uptane_manifest{config, storage};
+  Uptane::Manifest uptane_manifest{storage};
 
   auto sota_client = std_::make_unique<UptaneTestCommon::TestUptaneClient>(config, storage);
   EXPECT_NO_THROW(sota_client->initialize());
