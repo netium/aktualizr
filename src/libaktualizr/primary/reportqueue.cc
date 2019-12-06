@@ -4,8 +4,8 @@
 
 #include "config/config.h"
 
-ReportQueue::ReportQueue(const Config& config_in, std::shared_ptr<HttpInterface> http_client)
-    : config(config_in), http(std::move(http_client)) {
+ReportQueue::ReportQueue(std::string tls_server, std::shared_ptr<HttpInterface> http_client)
+    : tls_server_(std::move(tls_server)), http(std::move(http_client)) {
   thread_ = std::thread(std::bind(&ReportQueue::run, this));
 }
 
@@ -46,14 +46,14 @@ void ReportQueue::flushQueue() {
     report_queue_.pop();
   }
 
-  if (config.tls.server.empty()) {
+  if (tls_server_.empty()) {
     // Prevent a lot of unnecessary garbage output in uptane vector tests.
     LOG_TRACE << "No server specified. Clearing report queue.";
     report_array.clear();
   }
 
   if (!report_array.empty()) {
-    HttpResponse response = http->post(config.tls.server + "/events", report_array);
+    HttpResponse response = http->post(tls_server_ + "/events", report_array);
 
     // 404 implies the server does not support this feature. Nothing we can
     // do, just move along.

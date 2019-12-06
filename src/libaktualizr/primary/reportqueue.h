@@ -9,7 +9,6 @@
 
 #include <json/json.h>
 
-#include "config/config.h"
 #include "http/httpclient.h"
 #include "logging/logging.h"
 #include "uptane/tuf.h"
@@ -84,7 +83,7 @@ class EcuInstallationCompletedReport : public ReportEvent {
 
 class ReportQueue {
  public:
-  ReportQueue(const Config& config_in, std::shared_ptr<HttpInterface> http_client);
+  ReportQueue(std::string tls_server, std::shared_ptr<HttpInterface> http_client);
   ~ReportQueue();
   void run();
   void enqueue(std::unique_ptr<ReportEvent> event);
@@ -92,7 +91,7 @@ class ReportQueue {
  private:
   void flushQueue();
 
-  const Config& config;
+  std::string tls_server_;
   std::shared_ptr<HttpInterface> http;
   std::thread thread_;
   std::condition_variable cv_;

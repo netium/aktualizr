@@ -64,13 +64,10 @@ class HttpFakeRq : public HttpFake {
 /* Test one event. */
 TEST(ReportQueue, SingleEvent) {
   TemporaryDirectory temp_dir;
-  Config config;
-  config.storage.path = temp_dir.Path();
-  config.tls.server = "reportqueue/SingleEvent";
 
   size_t num_events = 1;
   auto http = std::make_shared<HttpFakeRq>(temp_dir.Path(), num_events);
-  ReportQueue report_queue(config, http);
+  ReportQueue report_queue("reportqueue/SingleEvent", http);
 
   report_queue.enqueue(std_::make_unique<EcuDownloadCompletedReport>(Uptane::EcuSerial("SingleEvent"), "", true));
 
@@ -82,13 +79,10 @@ TEST(ReportQueue, SingleEvent) {
 /* Test ten events. */
 TEST(ReportQueue, MultipleEvents) {
   TemporaryDirectory temp_dir;
-  Config config;
-  config.storage.path = temp_dir.Path();
-  config.tls.server = "reportqueue/MultipleEvents";
 
   size_t num_events = 10;
   auto http = std::make_shared<HttpFakeRq>(temp_dir.Path(), num_events);
-  ReportQueue report_queue(config, http);
+  ReportQueue report_queue("reportqueue/MultipleEvents", http);
 
   for (int i = 0; i < 10; ++i) {
     report_queue.enqueue(std_::make_unique<EcuDownloadCompletedReport>(
@@ -104,13 +98,10 @@ TEST(ReportQueue, MultipleEvents) {
  * tenth time should succeed with an array of all ten events. */
 TEST(ReportQueue, FailureRecovery) {
   TemporaryDirectory temp_dir;
-  Config config;
-  config.storage.path = temp_dir.Path();
-  config.tls.server = "reportqueue/FailureRecovery";
 
   size_t num_events = 10;
   auto http = std::make_shared<HttpFakeRq>(temp_dir.Path(), num_events);
-  ReportQueue report_queue(config, http);
+  ReportQueue report_queue("reportqueue/FailureRecovery", http);
 
   for (int i = 0; i < 10; ++i) {
     report_queue.enqueue(std_::make_unique<EcuDownloadCompletedReport>(
