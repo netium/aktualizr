@@ -10,11 +10,11 @@ set(ISOTP_SOURCES ${ISOTP_PATH_PREFIX}/isotp/isotp.c
 
 set_source_files_properties(${ISOTP_SOURCES} PROPERTIES COMPILE_FLAGS "-Wno-sign-conversion -Wno-conversion -Wno-error=unused-parameter")
 
-set(SOURCES isotp_conn.cc isotp_allocate.cc)
+set(SOURCES isotpsecondary.cc isotp_conn.cc isotp_allocate.cc)
 
-set(HEADERS isotp_conn.h)
+set(HEADERS isotpsecondary.h isotp_conn.h)
 
-add_library(isotp_conn OBJECT ${SOURCES} ${ISOTP_SOURCES})
-target_include_directories(isotp_conn PUBLIC ${ISOTP_PATH_PREFIX} ${BITFIELD_PATH_PREFIX})
+add_library(isotp_secondary STATIC ${SOURCES} ${ISOTP_SOURCES})
+target_include_directories(isotp_secondary PUBLIC ${ISOTP_PATH_PREFIX} ${BITFIELD_PATH_PREFIX})
 
 aktualizr_source_file_checks(${SOURCES} ${HEADERS})

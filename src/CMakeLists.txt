@@ -12,6 +12,10 @@ add_subdirectory("aktualizr_secondary")
 add_subdirectory("aktualizr_info")
 add_subdirectory("uptane_generator")
 
+if(BUILD_ISOTP)
+    add_subdirectory("isotp_secondary")
+endif(BUILD_ISOTP)
+
 add_subdirectory("cert_provider")
 add_subdirectory("aktualizr_lite")
 add_subdirectory("aktualizr_get")
