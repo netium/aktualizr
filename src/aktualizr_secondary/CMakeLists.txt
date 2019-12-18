@@ -53,12 +53,23 @@ list(INSERT TEST_LIBS 0 aktualizr_secondary_static_lib)
 add_aktualizr_test(NAME aktualizr_secondary_config
                    SOURCES aktualizr_secondary_config_test.cc PROJECT_WORKING_DIRECTORY)
 
-add_aktualizr_test(NAME aktualizr_secondary_uptane_verification
-                   SOURCES uptane_verification_test.cc
+if(BUILD_OSTREE)
+add_aktualizr_test(NAME aktualizr_secondary_uptane_verification_ostree
+                   SOURCES uptane_verification_ostree_test.cc
                    ARGS ${PROJECT_BINARY_DIR}/ostree_repo
                    PROJECT_WORKING_DIRECTORY)
 
-set_target_properties(t_aktualizr_secondary_uptane_verification PROPERTIES LINK_FLAGS -Wl,--export-dynamic)
+set_target_properties(t_aktualizr_secondary_uptane_verification_ostree PROPERTIES LINK_FLAGS -Wl,--export-dynamic)
+target_link_libraries(t_aktualizr_secondary_uptane_verification_ostree aktualizr_secondary_static_lib uptane_generator_lib)
+
+else(BUILD_OSTREE)
+    list(APPEND TEST_SOURCES uptane_verification_ostree_test.cc)
+endif(BUILD_OSTREE)
+
+add_aktualizr_test(NAME aktualizr_secondary_uptane_verification
+                   SOURCES uptane_verification_test.cc
+                   PROJECT_WORKING_DIRECTORY)
+
 target_link_libraries(t_aktualizr_secondary_uptane_verification aktualizr_secondary_static_lib uptane_generator_lib)
 
 add_aktualizr_test(NAME aktualizr_secondary_update
