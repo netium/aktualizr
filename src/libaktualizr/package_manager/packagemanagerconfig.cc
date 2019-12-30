@@ -28,6 +28,8 @@ std::ostream& operator<<(std::ostream& os, PackageManager pm) {
 
 void PackageConfig::updateFromPropertyTree(const boost::property_tree::ptree& pt) {
   CopyFromConfig(type, "type", pt);
+  CopyFromConfig(filepath, "filepath", pt);
+  CopyFromConfig(target_name, "target_name", pt);
   CopyFromConfig(os, "os", pt);
   CopyFromConfig(sysroot, "sysroot", pt);
   CopyFromConfig(ostree_server, "ostree_server", pt);
@@ -49,6 +51,8 @@ void PackageConfig::updateFromPropertyTree(const boost::property_tree::ptree& pt
 
 void PackageConfig::writeToStream(std::ostream& out_stream) const {
   writeOption(out_stream, type, "type");
+  writeOption(out_stream, filepath, "filepath");
+  writeOption(out_stream, target_name, "target_name");
   writeOption(out_stream, os, "os");
   writeOption(out_stream, sysroot, "sysroot");
   writeOption(out_stream, ostree_server, "ostree_server");

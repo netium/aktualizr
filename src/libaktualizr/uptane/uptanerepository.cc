@@ -19,18 +19,18 @@
 
 namespace Uptane {
 
-bool RepositoryCommon::initRoot(const std::string& root_raw) {
+bool RepositoryCommon::initRoot(const std::string &root_raw) {
   try {
     root = Root(type, Utils::parseJSON(root_raw));        // initialization and format check
     root = Root(type, Utils::parseJSON(root_raw), root);  // signature verification against itself
-  } catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     LOG_ERROR << "Loading initial root failed: " << e.what();
     return false;
   }
   return true;
 }
 
-bool RepositoryCommon::verifyRoot(const std::string& root_raw) {
+bool RepositoryCommon::verifyRoot(const std::string &root_raw) {
   try {
     int prev_version = root.version();
     root = Root(type, Utils::parseJSON(root_raw), root);  // double signature verification
@@ -38,7 +38,7 @@ bool RepositoryCommon::verifyRoot(const std::string& root_raw) {
       LOG_ERROR << "Version in root metadata doesn't match the expected value";
       return false;
     }
-  } catch (const std::exception& e) {
+  } catch (const std::exception &e) {
     LOG_ERROR << "Signature verification for root metadata failed: " << e.what();
     return false;
   }
@@ -46,10 +46,5 @@ bool RepositoryCommon::verifyRoot(const std::string& root_raw) {
 }
 
 void RepositoryCommon::resetRoot() { root = Root(Root::Policy::kAcceptAll); }
-
-Json::Value Manifest::signManifest(const Json::Value& manifest_unsigned) const {
-  Json::Value manifest = keys_.signTuf(manifest_unsigned);
-  return manifest;
-}
 
 }  // namespace Uptane

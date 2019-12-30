@@ -56,7 +56,7 @@ class Aktualizr:
                                                                secondary_cfg_file=self._secondary_config_file,
                                                                director=director.base_url if director else '',
                                                                image_repo=image_repo.base_url if image_repo else '',
-                                                               pacmam_type='ostree' if treehub and sysroot else 'fake',
+                                                               pacman_type='ostree' if treehub and sysroot else 'fake',
                                                                ostree_sysroot=sysroot.path if sysroot else '',
                                                                treehub_server=treehub.base_url if treehub else '',
                                                                sentinel_dir=self._storage_dir.name,
@@ -90,7 +90,7 @@ class Aktualizr:
     sqldb_path = "{db_path}"
 
     [pacman]
-    type = "{pacmam_type}"
+    type = "{pacman_type}"
     sysroot = "{ostree_sysroot}"
     ostree_server = "{treehub_server}"
     os = "dummy-os"
@@ -288,7 +288,7 @@ class IPSecondary:
                                                                  port=self.port, primary_port=self.primary_port,
                                                                  storage_dir=self._storage_dir,
                                                                  db_path=path.join(self._storage_dir.name, 'db.sql'),
-                                                                 pacmam_type='ostree' if treehub and sysroot else 'fake',
+                                                                 pacman_type='ostree' if treehub and sysroot else 'fake',
                                                                  ostree_sysroot=sysroot.path if sysroot else '',
                                                                  treehub_server=treehub.base_url if treehub else '',
                                                                  sentinel_dir=self._storage_dir.name,
@@ -316,17 +316,17 @@ class IPSecondary:
     type = "sqlite"
     path = "{storage_dir}"
     sqldb_path = "{db_path}"
-    
+
     [pacman]
-    type = "{pacmam_type}"
+    type = "{pacman_type}"
     sysroot = "{ostree_sysroot}"
     ostree_server = "{treehub_server}"
     os = "dummy-os"
-    
+
     [bootloader]
     reboot_sentinel_dir = "{sentinel_dir}"
     reboot_sentinel_name = "{sentinel_name}"
-    reboot_command = "" 
+    reboot_command = ""
     '''
 
     def is_running(self):
