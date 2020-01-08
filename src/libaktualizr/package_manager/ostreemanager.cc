@@ -316,6 +316,15 @@ std::string OstreeManager::getCurrentHash() const {
   return ostree_deployment_get_csum(booted_deployment);
 }
 
+std::string OstreeManager::getCurrentOsname() const {
+  GObjectUniquePtr<OstreeSysroot> sysroot_smart = OstreeManager::LoadSysroot(config.sysroot);
+  OstreeDeployment *booted_deployment = ostree_sysroot_get_booted_deployment(sysroot_smart.get());
+  if (booted_deployment == nullptr) {
+    throw std::runtime_error("Could not get booted deployment in " + config.sysroot.string());
+  }
+  return ostree_deployment_get_osname(booted_deployment);
+}
+
 Uptane::Target OstreeManager::getCurrent() const {
   const std::string current_hash = getCurrentHash();
   boost::optional<Uptane::Target> current_version;
@@ -327,8 +336,19 @@ Uptane::Target OstreeManager::getCurrent() const {
     return *current_version;
   }
 
-  LOG_ERROR << "Current versions in storage and reported by ostree do not match";
+  LOG_WARNING << "Current versions in storage and reported by ostree do not match";
 
+  // update the information in database
+  std::string file_name = getCurrentOsname() + '-' + current_hash;
+  Uptane::Target updateTarget(file_name,
+                              current_version->ecus(),
+                              std::vector<Uptane::Hash>(1, Uptane::Hash("sha256", current_hash)),
+                              0,
+                              current_version->correlation_id()
+                              );
+  storage_->savePrimaryInstalledVersion(updateTarget, InstalledVersionUpdateMode::kCurrent);
+  return updateTarget;
+#if 0
   // Look into installation log to find a possible candidate. Again, despite the
   // name, this will work for Secondaries as well.
   std::vector<Uptane::Target> installed_versions;
@@ -346,6 +366,7 @@ Uptane::Target OstreeManager::getCurrent() const {
   }
 
   return Uptane::Target::Unknown();
+#endif
 }
 
 // used for bootloader rollback

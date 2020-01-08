@@ -45,6 +45,7 @@ class OstreeManager : public PackageManagerInterface {
   std::string name() const override { return "ostree"; }
   Json::Value getInstalledPackages() const override;
   std::string getCurrentHash() const;
+  std::string getCurrentOsname() const;
   Uptane::Target getCurrent() const override;
   bool imageUpdated();
   data::InstallationResult install(const Uptane::Target &target) const override;
