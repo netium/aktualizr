@@ -6,6 +6,10 @@ Our versioning scheme is `YEAR.N` where `N` is incremented whenever a new releas
 
 ## [??? (unreleased)]
 
+### Added
+
+- Pluggable primary package managers: implementations for primary ECUs package managers can now be added without having to modify libaktualizr itself: [PR](https://github.com/advancedtelematic/aktualizr/pull/1498)
+
 
 ## [2020.2] - 2020-01-30
 
