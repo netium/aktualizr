@@ -1841,6 +1841,8 @@ class SQLTargetRHandle : public StorageTargetRHandle {
     return std::unique_ptr<StorageTargetWHandle>(new SQLTargetWHandle(db_path_, target_, image_path_, size_));
   }
 
+  std::ifstream& stream() override { return stream_; }
+
  private:
   boost::filesystem::path db_path_;
   SQLite3Guard db_;

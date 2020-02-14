@@ -71,6 +71,7 @@ class StorageTargetRHandle {
   virtual size_t rsize() const = 0;
   virtual size_t rread(uint8_t* buf, size_t size) = 0;
   virtual void rclose() = 0;
+  virtual std::ifstream& stream() = 0;
 
   void writeToFile(const boost::filesystem::path& path) {
     std::array<uint8_t, 1024> arr{};

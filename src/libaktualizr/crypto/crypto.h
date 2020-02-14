@@ -59,16 +59,24 @@ class PublicKey {
 };
 
 class MultiPartHasher {
- public:
-  virtual void update(const unsigned char *part, uint64_t size) = 0;
-  virtual std::string getHexDigest() = 0;
-  virtual ~MultiPartHasher() = default;
+  public:
+    void update(std::ifstream &in) {
+      std::vector<char> buf(1024);
+      while (!in.eof()) {
+        in.read(buf.data(), buf.size());
+        update(reinterpret_cast<unsigned char *>(buf.data()), in.gcount());
+      }
+    }
+    virtual void update(const unsigned char *part, uint64_t size) = 0;
+    virtual std::string getHexDigest() = 0;
+    virtual ~MultiPartHasher() = default;
 };
 
 class MultiPartSHA512Hasher : public MultiPartHasher {
  public:
   MultiPartSHA512Hasher() { crypto_hash_sha512_init(&state_); }
   ~MultiPartSHA512Hasher() override = default;
+  using MultiPartHasher::update;
   void update(const unsigned char *part, uint64_t size) override { crypto_hash_sha512_update(&state_, part, size); }
   std::string getHexDigest() override {
     unsigned char sha512_hash[crypto_hash_sha512_BYTES];
@@ -84,6 +92,7 @@ class MultiPartSHA256Hasher : public MultiPartHasher {
  public:
   MultiPartSHA256Hasher() { crypto_hash_sha256_init(&state_); }
   ~MultiPartSHA256Hasher() override = default;
+  using MultiPartHasher::update;
   void update(const unsigned char *part, uint64_t size) override { crypto_hash_sha256_update(&state_, part, size); }
   std::string getHexDigest() override {
     unsigned char sha256_hash[crypto_hash_sha256_BYTES];

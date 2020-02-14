@@ -68,16 +68,6 @@ static int ProgressHandler(void* clientp, curl_off_t dltotal, curl_off_t dlnow, 
   return 0;
 }
 
-static void restoreHasherState(MultiPartHasher& hasher, StorageTargetRHandle* data) {
-  size_t data_len;
-  size_t buf_len = 1024;
-  uint8_t buf[buf_len];
-  do {
-    data_len = data->rread(buf, buf_len);
-    hasher.update(buf, data_len);
-  } while (data_len != 0);
-}
-
 bool PackageManagerInterface::fetchTarget(const Uptane::Target& target, Uptane::Fetcher& fetcher,
                                           const KeyManager& keys, FetcherProgressCb progress_cb,
                                           const api::FlowControlToken* token) {
@@ -101,7 +91,7 @@ bool PackageManagerInterface::fetchTarget(const Uptane::Target& target, Uptane::
       auto target_check = storage_->checkTargetFile(target);
       ds->downloaded_length = target_check->first;
       auto target_handle = storage_->openTargetFile(target);
-      ::restoreHasherState(ds->hasher(), target_handle.get());
+      ds->hasher().update(target_handle.get()->stream());
       target_handle->rclose();
       ds->fhandle = target_handle->toWriteHandle();
     } else {
@@ -174,10 +164,9 @@ TargetStatus PackageManagerInterface::verifyTarget(const Uptane::Target& target)
   }
 
   // Even if the file exists and the length matches, recheck the hash.
-  DownloadMetaStruct ds(target, nullptr, nullptr);
-  ds.downloaded_length = target_exists->first;
   auto target_handle = storage_->openTargetFile(target);
-  ::restoreHasherState(ds.hasher(), target_handle.get());
+  DownloadMetaStruct ds(target, nullptr, nullptr);
+  ds.hasher().update(target_handle.get()->stream());
   target_handle->rclose();
   if (!target.MatchHash(Uptane::Hash(ds.hash_type, ds.hasher().getHexDigest()))) {
     LOG_ERROR << "Target exists with expected length, but hash does not match metadata! " << target;
