@@ -1531,8 +1531,10 @@ TEST(Aktualizr, DownloadListRemove) {
 
   // check that we can remove from the result of GetStoredTarget and
   // CheckUpdates
+  aktualizr.DeleteStoredTarget(update_result.updates[0]);
+  targets = aktualizr.GetStoredTargets();
+  EXPECT_EQ(targets.size(), 1);
   aktualizr.DeleteStoredTarget(targets[0]);
-  aktualizr.DeleteStoredTarget(update_result.updates[1]);
 
   targets = aktualizr.GetStoredTargets();
   EXPECT_EQ(targets.size(), 0);

@@ -213,7 +213,7 @@ class INvStorage {
   virtual bool loadEcuReportCounter(std::vector<std::pair<Uptane::EcuSerial, int64_t>>* results) = 0;
 
   virtual bool checkAvailableDiskSpace(uint64_t required_bytes) const = 0;
-  virtual boost::optional<std::pair<size_t, std::string>> checkTargetFile(const Uptane::Target& target) const = 0;
+  virtual boost::optional<std::pair<uint64_t, std::string>> checkTargetFile(const Uptane::Target& target) const = 0;
 
   // Incremental file API
   virtual std::unique_ptr<StorageTargetWHandle> allocateTargetFile(const Uptane::Target& target) = 0;

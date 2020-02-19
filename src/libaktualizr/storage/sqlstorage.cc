@@ -1649,49 +1649,41 @@ bool SQLStorage::checkAvailableDiskSpace(const uint64_t required_bytes) const {
   }
 }
 
-boost::optional<std::pair<size_t, std::string>> SQLStorage::checkTargetFile(const Uptane::Target& target) const {
-  SQLite3Guard db = dbConnection();
 
-  auto statement = db.prepareStatement<std::string>(
-      "SELECT real_size, sha256, sha512, filename FROM target_images WHERE targetname = ?;", target.filename());
 
-  int statement_state;
-  while ((statement_state = statement.step()) == SQLITE_ROW) {
-    auto sha256 = statement.get_result_col_str(1);
-    auto sha512 = statement.get_result_col_str(2);
-    if ((*sha256).empty() && (*sha512).empty()) {
-      // Old aktualizr didn't save checksums, this could require to redownload old images.
-      LOG_WARNING << "Image without checksum: " << target.filename();
-      continue;
-    }
-    bool sha256_match = false;
-    bool sha512_match = false;
-    if (!(*sha256).empty()) {
-      if (target.MatchHash(Uptane::Hash(Uptane::Hash::Type::kSha256, *sha256))) {
-        sha256_match = true;
-      }
-    }
 
-    if (!(*sha512).empty()) {
-      if (target.MatchHash(Uptane::Hash(Uptane::Hash::Type::kSha512, *sha512))) {
-        sha512_match = true;
-      }
-    }
-    if (((*sha256).empty() || sha256_match) && ((*sha512).empty() || sha512_match)) {
-      if (boost::filesystem::exists(images_path_ / *statement.get_result_col_str(3))) {
-        return {{static_cast<size_t>(statement.get_result_col_int(0)), *statement.get_result_col_str(3)}};
-      } else {
-        return boost::none;
-      }
-    }
-  }
+boost::optional<std::pair<uint64_t, std::string>> SQLStorage::checkTargetFile(const Uptane::Target& target) const {
+  auto name = images_path_ / target.filename();
 
-  if (statement_state == SQLITE_DONE) {
-    LOG_INFO << "No file '" + target.filename() << "' with matched hash in the database";
+  if (!boost::filesystem::is_regular_file(name)) {
     return boost::none;
   }
-  assert(statement_state != SQLITE_ROW);  // from the previous loop precondition
-  LOG_ERROR << "Statement step failure: " << db.errmsg();
+  auto size = boost::filesystem::file_size(name);
+  if (size != target.length()) {
+    LOG_DEBUG << "Target " << target.filename() << " is incomplete" << std::endl;
+    return {{size, target.filename()}};
+  }
+
+  // We don't compare hashes if the file is incomplete.
+  // Otherwise, it is enough to match only one hash.
+  std::ifstream data(name.string());
+  if (!target.sha256Hash().empty()) {
+    MultiPartSHA256Hasher hasher;
+    hasher.update(data);
+    if (target.MatchHash(Uptane::Hash(Uptane::Hash::Type::kSha256, hasher.getHexDigest()))) {
+      return {{size, target.filename()}};
+    }
+  }
+
+  if (!target.sha512Hash().empty()) {
+    MultiPartSHA512Hasher hasher;
+    hasher.update(data);
+    if (target.MatchHash(Uptane::Hash(Uptane::Hash::Type::kSha512, hasher.getHexDigest()))) {
+      return {{size, target.filename()}};
+    }
+  }
+
+  LOG_INFO << "Hash for stored target " << target.filename() << " doesn't match" << std::endl;
 
   return boost::none;
 }
@@ -1699,7 +1691,7 @@ boost::optional<std::pair<size_t, std::string>> SQLStorage::checkTargetFile(cons
 class SQLTargetWHandle : public StorageTargetWHandle {
  public:
   SQLTargetWHandle(const SQLStorage& storage, Uptane::Target target)
-      : db_(storage.dbPath()), target_(std::move(target)) {
+      : target_(std::move(target)) {
     StorageTargetWHandle::WriteError exc("could not save file " + target_.filename() + " to the filesystem");
 
     std::string sha256Hash;
@@ -1711,15 +1703,7 @@ class SQLTargetWHandle : public StorageTargetWHandle {
         sha512Hash = hash.HashString();
       }
     }
-    std::string filename = (storage.images_path_ / target_.hashes()[0].HashString()).string();
-    auto statement = db_.prepareStatement<std::string, std::string, std::string>(
-        "INSERT OR REPLACE INTO target_images (targetname, sha256, sha512, filename) VALUES ( ?, ?, ?, ?);",
-        target_.filename(), sha256Hash, sha512Hash, target_.hashes()[0].HashString());
-
-    if (statement.step() != SQLITE_DONE) {
-      LOG_ERROR << "Statement step failure: " << db_.errmsg();
-      throw exc;
-    }
+    std::string filename = (storage.images_path_ / target_.filename()).string();
     boost::filesystem::create_directories(storage.images_path_);
     stream_.open(filename);
     if (!stream_.good()) {
@@ -1748,15 +1732,6 @@ class SQLTargetWHandle : public StorageTargetWHandle {
   void wcommit() override {
     if (stream_) {
       stream_.close();
-      auto statement =
-          db_.prepareStatement<int64_t, std::string>("UPDATE target_images SET real_size = ? WHERE targetname = ?;",
-                                                     static_cast<int64_t>(written_size_), target_.filename());
-
-      int err = statement.step();
-      if (err != SQLITE_DONE) {
-        LOG_ERROR << "Could not save size in db: " << db_.errmsg();
-        throw StorageTargetWHandle::WriteError("could not update size of " + target_.filename() + " in sql storage");
-      }
     }
   }
 
@@ -1764,25 +1739,13 @@ class SQLTargetWHandle : public StorageTargetWHandle {
     if (stream_) {
       stream_.close();
     }
-    if (sqlite3_changes(db_.get()) > 0) {
-      auto statement =
-          db_.prepareStatement<std::string>("DELETE FROM target_images WHERE targetname=?;", target_.filename());
-      if (statement.step() != SQLITE_DONE) {
-        LOG_ERROR << "could not delete " << target_.filename() << " from sql storage";
-      }
-    }
   }
 
   friend class SQLTargetRHandle;
 
  private:
-  SQLTargetWHandle(const boost::filesystem::path& db_path, Uptane::Target target,
-                   const boost::filesystem::path& image_path, const size_t& start_from = 0)
-      : db_(db_path), target_(std::move(target)) {
-    if (db_.get_rc() != SQLITE_OK) {
-      LOG_ERROR << "Can't open database: " << db_.errmsg();
-      throw StorageTargetWHandle::WriteError("could not open sql storage");
-    }
+  SQLTargetWHandle(Uptane::Target target, const boost::filesystem::path& image_path, const size_t& start_from = 0)
+      : target_(std::move(target)) {
     stream_.open(image_path.string(), std::ofstream::out | std::ofstream::app);
     if (!stream_.good()) {
       LOG_ERROR << "Could not open image for write: " << image_path;
@@ -1791,7 +1754,6 @@ class SQLTargetWHandle : public StorageTargetWHandle {
 
     written_size_ = start_from;
   }
-  SQLite3Guard db_;
   Uptane::Target target_;
   std::ofstream stream_;
 };
@@ -1838,7 +1800,7 @@ class SQLTargetRHandle : public StorageTargetRHandle {
 
   bool isPartial() const noexcept override { return partial_; }
   std::unique_ptr<StorageTargetWHandle> toWriteHandle() override {
-    return std::unique_ptr<StorageTargetWHandle>(new SQLTargetWHandle(db_path_, target_, image_path_, size_));
+    return std::unique_ptr<StorageTargetWHandle>(new SQLTargetWHandle(target_, image_path_, size_));
   }
 
   std::ifstream& stream() override { return stream_; }
@@ -1858,71 +1820,30 @@ std::unique_ptr<StorageTargetRHandle> SQLStorage::openTargetFile(const Uptane::T
 }
 
 std::vector<Uptane::Target> SQLStorage::getTargetFiles() {
-  SQLite3Guard db = dbConnection();
-
-  auto statement = db.prepareStatement<>("SELECT targetname, real_size, sha256, sha512 FROM target_images;");
-
   std::vector<Uptane::Target> v;
 
-  int result = statement.step();
-  while (result != SQLITE_DONE) {
-    if (result != SQLITE_ROW) {
-      LOG_ERROR << "Statement step failure: " << db.errmsg();
-      throw std::runtime_error("Error getting target files");
+  if (boost::filesystem::is_directory(images_path_)) {
+    for (auto& f: boost::filesystem::directory_iterator(images_path_)) {
+      auto name = f.path().filename().string();
+      auto size = boost::filesystem::file_size(f);
+      v.emplace_back(name, Uptane::EcuMap{}, std::vector<Uptane::Hash>(), size);
     }
-
-    auto tname = statement.get_result_col_str(0).value();
-    auto tsize = statement.get_result_col_int(1);
-    auto sha256 = statement.get_result_col_str(2).value();
-    auto sha512 = statement.get_result_col_str(3).value();
-
-    std::vector<Uptane::Hash> hashes;
-    if (!sha256.empty()) {
-      hashes.emplace_back(Uptane::Hash::Type::kSha256, sha256);
-    }
-    if (!sha512.empty()) {
-      hashes.emplace_back(Uptane::Hash::Type::kSha512, sha512);
-    }
-    v.emplace_back(tname, Uptane::EcuMap{}, hashes, static_cast<size_t>(tsize));
-
-    result = statement.step();
   }
 
   return v;
 }
 
 void SQLStorage::removeTargetFile(const std::string& target_name) {
-  SQLite3Guard db = dbConnection();
-
-  if (!db.beginTransaction()) {
-    LOG_ERROR << "Can't start transaction: " << db.errmsg();
-    return;
-  }
-
-  auto statement =
-      db.prepareStatement<std::string>("SELECT filename FROM target_images WHERE targetname = ?;", target_name);
-
-  if (statement.step() != SQLITE_ROW) {
-    LOG_ERROR << "Statement step failure: " << db.errmsg();
-    throw std::runtime_error("Could not find target file");
-  }
-
-  std::string filename = statement.get_result_col_str(0).value();
-
-  statement = db.prepareStatement<std::string>("DELETE FROM target_images WHERE targetname=?;", target_name);
-
-  if (statement.step() != SQLITE_DONE) {
-    LOG_ERROR << "Statement step failure: " << db.errmsg();
-    throw std::runtime_error("Could not remove target file");
-  }
   try {
-    boost::filesystem::remove(images_path_ / filename);
+    if (!boost::filesystem::remove(images_path_ / target_name)) {
+      throw std::runtime_error("file doesn't exist");
+    }
   } catch (std::exception& e) {
-    LOG_ERROR << "Could not remove target file";
-    throw;
+    std::string error("Could not remove target file");
+    LOG_ERROR << error << " " << target_name << ": " << e.what();
+    std::throw_with_nested(StorageException(error));
   }
 
-  db.commitTransaction();
 }
 
 void SQLStorage::cleanUp() { boost::filesystem::remove_all(dbPath()); }

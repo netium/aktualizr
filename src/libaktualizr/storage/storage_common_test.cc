@@ -466,7 +466,7 @@ TEST(storage, store_target) {
   std::unique_ptr<INvStorage> storage = Storage(temp_dir.Path());
 
   Json::Value target_json;
-  target_json["hashes"]["sha256"] = "hash";
+  target_json["hashes"]["sha256"] = "fb8e20fc2e4c3f248c60c39bd652f3c1347298bb977b8b4d5903b85055620603";
   target_json["length"] = 2;
   Uptane::Target target("some.deb", target_json);
 
@@ -503,7 +503,7 @@ TEST(storage, store_target) {
   {
     storage->removeTargetFile(target.filename());
     EXPECT_THROW(storage->openTargetFile(target), StorageTargetRHandle::ReadError);
-    EXPECT_THROW(storage->removeTargetFile(target.filename()), std::runtime_error);
+    EXPECT_THROW(storage->removeTargetFile(target.filename()), StorageException);
   }
 
   // write stream
@@ -530,7 +530,7 @@ TEST(storage, list_remove_targets) {
   std::unique_ptr<INvStorage> storage = Storage(temp_dir.Path());
 
   Json::Value target_json;
-  target_json["hashes"]["sha256"] = "HASH";
+  target_json["hashes"]["sha256"] = "fb8e20fc2e4c3f248c60c39bd652f3c1347298bb977b8b4d5903b85055620603";
   target_json["length"] = 2;
   Uptane::Target target("some.deb", target_json);
 
@@ -553,17 +553,15 @@ TEST(storage, list_remove_targets) {
 
   EXPECT_EQ(tf.filename(), "some.deb");
   EXPECT_EQ(tf.length(), 2);
-  EXPECT_EQ(tf.hashes().size(), 1);
-  EXPECT_EQ(tf.hashes().at(0), Uptane::Hash(Uptane::Hash::Type::kSha256, "HASH"));
 
   // note: implementation specific
-  EXPECT_TRUE(boost::filesystem::exists(temp_dir.Path() / "images" / "HASH"));
+  EXPECT_TRUE(boost::filesystem::exists(temp_dir.Path() / "images" / "some.deb"));
 
   storage->removeTargetFile(tf.filename());
 
   tfs = storage->getTargetFiles();
   EXPECT_EQ(tfs.size(), 0);
-  EXPECT_FALSE(boost::filesystem::exists(temp_dir.Path() / "images" / "HASH"));
+  EXPECT_FALSE(boost::filesystem::exists(temp_dir.Path() / "images" / "some.deb"));
 }
 
 TEST(storage, load_store_secondary_info) {
@@ -613,7 +611,7 @@ TEST(storage, checksum) {
   std::unique_ptr<INvStorage> storage = Storage(temp_dir.Path());
 
   Json::Value target_json1;
-  target_json1["hashes"]["sha256"] = "hash1";
+  target_json1["hashes"]["sha256"] = "fb8e20fc2e4c3f248c60c39bd652f3c1347298bb977b8b4d5903b85055620603";
   target_json1["length"] = 2;
   Uptane::Target target1("some.deb", target_json1);
   Json::Value target_json2;
