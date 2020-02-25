@@ -138,7 +138,6 @@ class Socket {
  protected:
   void bind(in_port_t port, bool reuse = true);
 
- protected:
   int socket_fd_;
 };
 
@@ -177,7 +176,7 @@ class CurlEasyWrapper {
 template <typename... T>
 static void curlEasySetoptWrapper(CURL *curl_handle, CURLoption option, T &&... args) {
   const CURLcode retval = curl_easy_setopt(curl_handle, option, std::forward<T>(args)...);
-  if (retval != 0u) {
+  if (retval != 0U) {
     throw std::runtime_error(std::string("curl_easy_setopt error: ") + curl_easy_strerror(retval));
   }
 }
@@ -190,12 +189,12 @@ struct _Unique_if {
 };
 
 template <class T>
-struct _Unique_if<T[]> {
-  using _Unknown_bound = std::unique_ptr<T[]>;
+struct _Unique_if<T[]> {  // NOLINT
+  using _Unknown_bound = std::unique_ptr<T[]>;  // NOLINT
 };
 
 template <class T, size_t N>
-struct _Unique_if<T[N]> {
+struct _Unique_if<T[N]> {  // NOLINT
   using _Known_bound = void;
 };
 

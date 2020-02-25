@@ -4,9 +4,9 @@
 #include <utility>
 
 std::string TimeToString(struct tm time) {
-  char formatted[22];
-  strftime(formatted, 22, "%Y-%m-%dT%H:%M:%SZ", &time);
-  return formatted;
+  std::array<char, 22> formatted;
+  strftime(formatted.data(), 22, "%Y-%m-%dT%H:%M:%SZ", &time);
+  return std::string(formatted.data());
 }
 
 TimeStamp TimeStamp::Now() { return TimeStamp(CurrentTime()); }
@@ -51,7 +51,7 @@ std::ostream &operator<<(std::ostream &os, const TimeStamp &t) {
 }
 
 namespace data {
-Json::Value Package::toJson() {
+Json::Value Package::toJson() const {
   Json::Value json;
   json["name"] = name;
   json["version"] = version;
