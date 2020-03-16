@@ -233,7 +233,7 @@ endif()
 add_custom_target(build_tests)
 
 # clang-check and clang-format
-find_program(CLANG_FORMAT NAMES clang-format-6.0)
+find_program(CLANG_FORMAT NAMES clang-format-9)
 find_program(CLANG_TIDY NAMES clang-tidy-6.0)
 
 if(CLANG_FORMAT)
@@ -257,7 +257,7 @@ if(CLANG_FORMAT)
         endforeach()
     endfunction()
 else()
-    message(WARNING "clang-format-6.0 not found, skipping")
+    message(WARNING "clang-format-9 not found, skipping")
     function(aktualizr_clang_format)
     endfunction()
 endif()
