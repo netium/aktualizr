@@ -40,7 +40,7 @@ bool OstreeUpdateAgent::download(const Uptane::Target& target, const std::string
   bool download_result = false;
 
   try {
-    std::string ca, cert, pkey, server_url;
+    std::string ca, cert, pkey, server_url;  // NOLINT: readability-isolate-declaration
     extractCredentialsArchive(data, &ca, &cert, &pkey, &server_url);
     // TODO: why are qe loading this credentials at all ?
     _keyMngr->loadKeys(&pkey, &cert, &ca);

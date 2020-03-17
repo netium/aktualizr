@@ -139,7 +139,6 @@ class Socket {
  protected:
   void bind(in_port_t port, bool reuse = true);
 
- protected:
   int socket_fd_;
 };
 
