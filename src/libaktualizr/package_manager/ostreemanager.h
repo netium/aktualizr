@@ -11,8 +11,6 @@
 #include "packagemanagerinterface.h"
 #include "utilities/apiqueue.h"
 
-const char *remote = "aktualizr-remote";
-
 template <typename T>
 struct GObjectFinalizer {
   void operator()(T *e) const { g_object_unref(reinterpret_cast<gpointer>(e)); }
