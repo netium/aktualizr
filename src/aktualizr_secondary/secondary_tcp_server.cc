@@ -1,16 +1,20 @@
 #include "secondary_tcp_server.h"
 
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+
 #include "AKIpUptaneMes.h"
 #include "asn1/asn1_message.h"
 #include "logging/logging.h"
 #include "uptane/secondaryinterface.h"
 #include "utilities/dequeue_buffer.h"
+#include "handlermap.h"
 
-#include <netinet/tcp.h>
 
-SecondaryTcpServer::SecondaryTcpServer(Uptane::SecondaryInterface &secondary, const std::string &primary_ip,
+SecondaryTcpServer::SecondaryTcpServer(HandlerMap& handler_map, Uptane::SecondaryInterface &secondary, const std::string &primary_ip,
                                        in_port_t primary_port, in_port_t port, bool reboot_after_install)
-    : impl_(secondary), listen_socket_(port), keep_running_(true), reboot_after_install_(reboot_after_install) {
+    : impl_(secondary), listen_socket_(port), keep_running_(true), reboot_after_install_(reboot_after_install),
+      handler_map_(handler_map) {
   if (primary_ip.empty()) {
     return;
   }
@@ -85,6 +89,7 @@ bool SecondaryTcpServer::HandleOneConnection(int socket) {
     } while (res.code == RC_WMORE && received > 0);
     // Note that ber_decode allocates *m even on failure, so this must always be done
     Asn1Message::Ptr msg = Asn1Message::FromRaw(&m);
+    LOG_INFO << ">>> Rec message: " << msg->present();
 
     if (res.code != RC_OK) {
       return true;  // Either an error or the client closed the socket
@@ -140,29 +145,35 @@ bool SecondaryTcpServer::HandleOneConnection(int socket) {
         auto r = resp->putMetaResp();
         r->result = ok ? AKInstallationResult_success : AKInstallationResult_failure;
       } break;
-      case AKIpUptaneMes_PR_sendFirmwareReq: {
-        auto fw = msg->sendFirmwareReq();
-        auto send_firmware_result = impl_.sendFirmware(ToString(fw->firmware));
-        resp->present(AKIpUptaneMes_PR_sendFirmwareResp);
-        auto r = resp->sendFirmwareResp();
-        r->result = send_firmware_result ? AKInstallationResult_success : AKInstallationResult_failure;
-      } break;
-      case AKIpUptaneMes_PR_installReq: {
-        auto request = msg->installReq();
+//      case AKIpUptaneMes_PR_sendFirmwareReq: {
+//        auto fw = msg->sendFirmwareReq();
+//        auto send_firmware_result = impl_.sendFirmware(ToString(fw->firmware));
+//        resp->present(AKIpUptaneMes_PR_sendFirmwareResp);
+//        auto r = resp->sendFirmwareResp();
+//        r->result = send_firmware_result ? AKInstallationResult_success : AKInstallationResult_failure;
+//      } break;
+//      case AKIpUptaneMes_PR_downloadFileReq: {
+//        auto request = msg->installReq();
 
-        auto install_result = impl_.install(ToString(request->hash));
+//        //handler = impl_.handler["download"]
+//        download_file("127.0.0.1", 8333,  1048576,  "target.file");
 
-        resp->present(AKIpUptaneMes_PR_installResp);
-        auto response_message = resp->installResp();
-        response_message->result = static_cast<AKInstallationResultCode_t>(install_result);
 
-        if (install_result == data::ResultCode::Numeric::kNeedCompletion) {
-          need_reboot = true;
-        }
-      } break;
+//        //auto install_result = impl_.install();
+//        auto install_result = data::ResultCode::Numeric::kOk;
+//        resp->present(AKIpUptaneMes_PR_installResp);
+//        auto response_message = resp->installResp();
+//        response_message->result = static_cast<AKInstallationResultCode_t>(install_result);
+
+//        if (install_result == data::ResultCode::Numeric::kNeedCompletion) {
+//          need_reboot = true;
+//        }
+//      } break;
       default:
-        LOG_ERROR << "Unrecognised message type:" << msg->present();
-        return true;
+        resp = handler_map_[msg->present()](msg);
+        //LOG_ERROR << "Unrecognised message type, sending `unsupported` response:" << msg->present();
+
+        //return true;
     }
 
     // Send the response

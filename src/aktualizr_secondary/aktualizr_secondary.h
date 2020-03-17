@@ -8,10 +8,12 @@
 #include "uptane/directorrepository.h"
 #include "uptane/imagerepository.h"
 #include "uptane/manifest.h"
+#include "asn1/asn1_message.h"
 
 class UpdateAgent;
 class INvStorage;
 class KeyManager;
+class HandlerMap;
 
 class AktualizrSecondary : public Uptane::SecondaryInterface {
  public:
@@ -31,17 +33,24 @@ class AktualizrSecondary : public Uptane::SecondaryInterface {
   bool putMetadata(const Uptane::RawMetaPack& meta_pack) override { return putMetadata(Metadata(meta_pack)); }
   int32_t getRootVersion(bool director) const override;
   bool putRoot(const std::string& root, bool director) override;
-  bool sendFirmware(const std::string& firmware) override;
-  data::ResultCode::Numeric install(const std::string& target_name) override;
+  virtual data::ResultCode::Numeric install(const Uptane::Target& target_name) override;
+  bool sendFirmware(const std::string& firmware);
+  data::ResultCode::Numeric install(const std::string& target_name);
 
   void completeInstall();
   bool putMetadata(const Metadata& metadata);
+  HandlerMap& getHandlerMap() const {
+    return *handler_map_;
+  }
 
  private:
   bool hasPendingUpdate() { return storage_->hasPendingInstall(); }
   bool doFullVerification(const Metadata& metadata);
   void uptaneInitialize();
   void initPendingTargetIfAny();
+  void initHandlerMap();
+
+  Asn1Message::Ptr download(Asn1Message::Ptr);
 
  private:
   Uptane::DirectorRepository director_repo_;
@@ -58,6 +67,8 @@ class AktualizrSecondary : public Uptane::SecondaryInterface {
   Uptane::HardwareIdentifier hardware_id_{Uptane::HardwareIdentifier::Unknown()};
 
   std::shared_ptr<UpdateAgent> update_agent_;
+  std::shared_ptr<HandlerMap> handler_map_;
+
 };
 
 #endif  // AKTUALIZR_SECONDARY_H

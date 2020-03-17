@@ -103,4 +103,10 @@ bool PartialVerificationSecondary::loadKeys(std::string *public_key, std::string
   *public_key = Utils::readFile(public_key_path.string());
   return true;
 }
+
+data::ResultCode::Numeric PartialVerificationSecondary::install(const Uptane::Target& target_name) {
+  (void)target_name;
+  return data::ResultCode::Numeric::kOk;
+}
+
 }  // namespace Uptane

@@ -7,6 +7,7 @@ set(AKTUALIZR_SECONDARY_LIB_SRC
     aktualizr_secondary_config.cc
     aktualizr_secondary_metadata.cc
     secondary_tcp_server.cc
+    handlermap.cc
     )
 
 # do not link tests with libaktualizr
@@ -51,6 +52,7 @@ set(ALL_AKTUALIZR_SECONDARY_HEADERS
     aktualizr_secondary_config.h
     aktualizr_secondary_metadata.h
     secondary_tcp_server.h
+    handlermap.h
     )
 
 # insert in front, so that the order matches the dependencies to the system libraries

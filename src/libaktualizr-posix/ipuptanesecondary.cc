@@ -7,6 +7,7 @@
 #include "logging/logging.h"
 
 #include <memory>
+#include <iostream>
 
 namespace Uptane {
 
@@ -124,11 +125,21 @@ bool IpUptaneSecondary::sendFirmware(const std::string& data) {
   std::lock_guard<std::mutex> l(install_mutex);
   LOG_INFO << "Sending firmware to the secondary";
   Asn1Message::Ptr req(Asn1Message::Empty());
-  req->present(AKIpUptaneMes_PR_sendFirmwareReq);
+  req->present(AKIpUptaneMes_PR_sendFirmwareReqv1);
 
-  auto m = req->sendFirmwareReq();
-  SetString(&m->firmware, data);
+  auto m = req->sendFirmwareReqv1();
+  SetString(&m->target, data);
   auto resp = Asn1Rpc(req, getAddr());
+
+  if (resp->present() != AKIpUptaneMes_PR_notSupportedResp) {
+
+    LOG_ERROR << "The given version of request is not supported, fallback to the previous/another version";
+    req->present(AKIpUptaneMes_PR_sendFirmwareReq);
+
+    auto m1 = req->sendFirmwareReq();
+    SetString(&m1->firmware, data);
+    resp = Asn1Rpc(req, getAddr());
+  }
 
   if (resp->present() != AKIpUptaneMes_PR_sendFirmwareResp) {
     LOG_ERROR << "Failed to get response to sending firmware to secondary";
@@ -194,6 +205,115 @@ bool IpUptaneSecondary::ping() const {
   auto resp = Asn1Rpc(req, getAddr());
 
   return resp->present() == AKIpUptaneMes_PR_getInfoResp;
+}
+
+int serve_file(uint16_t port, const std::string& filename) {
+  int sockfd, connfd;
+  struct sockaddr_in servaddr, cli;
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  if (sockfd == -1) {
+      printf("socket creation failed...\n");
+      return  -1;
+  }
+  else
+      printf("Socket successfully created..\n");
+
+  bzero(&servaddr, sizeof(servaddr));
+
+  servaddr.sin_family = AF_INET;
+  servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+  servaddr.sin_port = htons(port);
+
+  if ((bind(sockfd, reinterpret_cast<struct sockaddr*>(&servaddr), sizeof(servaddr))) != 0) {
+      printf("socket bind failed...\n");
+      return -1;
+  }
+  else {
+    std::cout << "Socket successfully binded..." << std::endl;
+  }
+
+  // Now server is ready to listen and verification
+  if ((listen(sockfd, 5)) != 0) {
+      printf("Listen failed...\n");
+      return -1;
+  } else {
+    std::cout << "Server listening..." << std::endl;
+  }
+  socklen_t len1 = sizeof(cli);
+
+  // Accept the data packet from client and verification
+  connfd = accept(sockfd, reinterpret_cast<sockaddr*>(&cli), &len1);
+  if (connfd < 0) {
+      std::cerr << "server acccept failed..." << std::endl;
+      return -1;
+  } else {
+      std::cout << "server acccept the client..." << std::endl;
+  }
+
+  int no_delay = 1;
+  setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, &no_delay, sizeof(int));
+
+  {
+    FILE* fp = fopen(filename.c_str(), "rb");
+    if (fp == NULL) {
+        std::cerr << "Failed to open file: " << filename << std::endl;
+        return -1;
+    }
+
+    auto read_fuffer = new char[1024];
+    size_t read_bytes = 0;
+    size_t total_written_bytes = 0;
+
+    while (!feof(fp)) {
+      read_bytes = fread(read_fuffer,  1, 1024, fp);
+      std::cout << "Read: " << read_bytes << std::endl;
+      total_written_bytes += write(connfd, read_fuffer, read_bytes);
+      std::cout << "Total written to socket: " << total_written_bytes << std::endl;
+    }
+
+    fclose(fp);
+  }
+
+  std::cout << "Closing the server: " << std::endl;
+  shutdown(sockfd, SHUT_RDWR);
+  close(sockfd);
+
+  return 0;
+}
+
+
+data::ResultCode::Numeric IpUptaneSecondary::install(const Uptane::Target& target) {
+
+  std::thread server_thread([&](){
+    serve_file(8333, target.custom_data()["target_abs_filepath"].asString());
+  });
+
+  LOG_INFO << "Invoking an installation of the target on the secondary: " << target.filename();
+
+  Asn1Message::Ptr req(Asn1Message::Empty());
+  req->present(AKIpUptaneMes_PR_downloadFileReq);
+
+  // prepare request message
+  auto req_mes = req->downloadFileReq();
+
+  // send request and receive response, a request-response type of RPC
+  auto resp = Asn1Rpc(req, getAddr());
+
+  // invalid type of an response message
+  if (resp->present() != AKIpUptaneMes_PR_installResp) {
+    LOG_ERROR << "Failed to get response to an installation request to secondary";
+    return data::ResultCode::Numeric::kInternalError;
+  }
+
+  // deserialize the response message
+  auto r = resp->installResp();
+
+  if (server_thread.joinable()) {
+    server_thread.join();
+  }
+
+  return static_cast<data::ResultCode::Numeric>(r->result);
 }
 
 }  // namespace Uptane

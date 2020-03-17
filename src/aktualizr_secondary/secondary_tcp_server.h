@@ -8,6 +8,8 @@
 namespace Uptane {
 class SecondaryInterface;
 }  // namespace Uptane
+
+class HandlerMap;
 /**
  * Listens on a socket, decodes calls (ASN.1) and forwards them to an Uptane Secondary
  * implementation
@@ -20,7 +22,7 @@ class SecondaryTcpServer {
     kUnkown,
   };
 
-  SecondaryTcpServer(Uptane::SecondaryInterface& secondary, const std::string& primary_ip, in_port_t primary_port,
+  SecondaryTcpServer(HandlerMap& handler_map, Uptane::SecondaryInterface& secondary, const std::string& primary_ip, in_port_t primary_port,
                      in_port_t port = 0, bool reboot_after_install = false);
 
   SecondaryTcpServer(const SecondaryTcpServer&) = delete;
@@ -45,6 +47,7 @@ class SecondaryTcpServer {
   std::atomic<bool> keep_running_;
   bool reboot_after_install_;
   ExitReason exit_reason_{ExitReason::kNotApplicable};
+  HandlerMap& handler_map_;
 };
 
 #endif  // AKTUALIZR_SECONDARY_TCP_SERVER_H_

@@ -168,4 +168,11 @@ bool IsoTpSecondary::sendFirmware(const std::string& data) {
   }
   return true;
 }
+
+data::ResultCode::Numeric IsoTpSecondary::install(const Uptane::Target& target_name) {
+  (void)target_name;
+
+  return data::ResultCode::Numeric::kOk;
+}
+
 }  // namespace Uptane

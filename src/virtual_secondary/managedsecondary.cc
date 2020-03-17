@@ -225,4 +225,10 @@ bool ManagedSecondary::loadKeys(std::string *pub_key, std::string *priv_key) {
   return true;
 }
 
+data::ResultCode::Numeric ManagedSecondary::install(const Uptane::Target& target_name) {
+  (void)target_name;
+
+  return data::ResultCode::Numeric::kOk;
+}
+
 }  // namespace Primary

@@ -5,6 +5,13 @@
 #include "update_agent.h"
 #include "uptane/manifest.h"
 #include "utilities/utils.h"
+#include "handlermap.h"
+
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+
+
+#include <iostream>
 
 #include <sys/types.h>
 #include <memory>
@@ -14,9 +21,11 @@ AktualizrSecondary::AktualizrSecondary(AktualizrSecondaryConfig config, std::sha
     : config_(std::move(config)),
       storage_(std::move(storage)),
       keys_(std::move(key_mngr)),
-      update_agent_(std::move(update_agent)) {
+      update_agent_(std::move(update_agent)),
+      handler_map_(std::make_shared<HandlerMap>()) {
   uptaneInitialize();
   manifest_issuer_ = std::make_shared<Uptane::ManifestIssuer>(keys_, ecu_serial_);
+  initHandlerMap();
   initPendingTargetIfAny();
 
   if (hasPendingUpdate()) {
@@ -264,4 +273,96 @@ void AktualizrSecondary::initPendingTargetIfAny() {
 
   LOG_INFO << "There is a valid and pending Director target to be applied";
   pending_target_ = targetsForThisEcu[0];
+}
+
+data::ResultCode::Numeric AktualizrSecondary::install(const Uptane::Target& target_name) {
+
+  (void)target_name;
+
+  return data::ResultCode::Numeric::kOk;
+}
+
+
+int download_file(const std::string& ip, uint16_t port, size_t file_size, const std::string& dest_file);
+
+Asn1Message::Ptr AktualizrSecondary::download(Asn1Message::Ptr msg) {
+  LOG_INFO << "?????????????????????? Got download message";
+
+  auto request = msg->installReq();
+
+  //handler = impl_.handler["download"]
+  download_file("127.0.0.1", 8333,  1048576,  "target.file");
+
+
+  //auto install_result = impl_.install();
+  auto install_result = data::ResultCode::Numeric::kOk;
+  Asn1Message::Ptr resp = Asn1Message::Empty();
+  resp->present(AKIpUptaneMes_PR_installResp);
+  auto response_message = resp->installResp();
+  response_message->result = static_cast<AKInstallationResultCode_t>(install_result);
+
+  return resp;
+}
+
+void AktualizrSecondary::initHandlerMap() {
+  using std::placeholders::_1;
+  HandlerMap::Handler hdlr = std::bind(&AktualizrSecondary::download, this, _1);
+
+  handler_map_->registerHandler(AKIpUptaneMes_PR_downloadFileReq, hdlr);
+}
+
+int download_file(const std::string& ip, uint16_t port, size_t file_size, const std::string& dest_file) {
+  std::cout << "Downloading file from " << ip << ":" << port << std::endl;
+  int socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (-1 == socket_fd_) {
+    throw std::system_error(errno, std::system_category(), std::strerror(errno));
+  }
+
+  struct sockaddr_in remote_sock_address_;
+
+  memset(&remote_sock_address_, 0, sizeof(remote_sock_address_));
+  remote_sock_address_.sin_family = AF_INET;
+
+  if (-1 == inet_pton(AF_INET, ip.c_str(), &(remote_sock_address_.sin_addr))) {
+    throw std::system_error(errno, std::system_category(), "socket");
+  }
+  remote_sock_address_.sin_port = htons(port);
+
+  std::cout << "Connecting to " << port << std::endl;
+  if (-1 == ::connect(socket_fd_, reinterpret_cast<const struct sockaddr *>(&remote_sock_address_),
+                      sizeof(remote_sock_address_))) {
+    throw std::system_error(errno, std::system_category(), std::strerror(errno));
+  }
+
+  auto read_buffer = new char[1024];
+
+  ssize_t read_bytes = 0;
+  size_t total_read_bytes = 0;
+
+  FILE* fp = fopen(dest_file.c_str(), "wb");
+
+  if (fp == NULL) {
+
+    std::cerr << "Failed to open file: " << dest_file << std::endl;
+    return -1;
+  }
+
+  do {
+    read_bytes = recv(socket_fd_, read_buffer, 1024, 0);
+    if (read_bytes > 0) {
+      std::cout << "Read from socket: " << read_bytes << std::endl;
+      fwrite(read_buffer, 1, read_bytes, fp);
+      fflush(fp);
+      total_read_bytes += read_bytes;
+      std::cout << "Total written to file: " << total_read_bytes << std::endl;
+    }
+  } while (read_bytes > 0 && total_read_bytes < file_size);
+
+  std::cout << "End of download " << std::endl;
+
+  fclose(fp);
+  shutdown(socket_fd_, SHUT_RD);
+  close(socket_fd_);
+
+  return 0;
 }

@@ -49,6 +49,18 @@ IpUptane DEFINITIONS ::= BEGIN
     ...
   }
 
+  AKDownloadFileReqMes ::= SEQUENCE {
+    ...
+  }
+
+  AKDownloadFileRespMes ::= SEQUENCE {
+    ...
+  }
+
+  AKNotSupportedRespMes ::= SEQUENCE {
+    ...
+  }
+
   AKGetInfoRespMes ::= SEQUENCE {
     ecuSerial UTF8String,
     hwId UTF8String,
@@ -89,6 +101,11 @@ IpUptane DEFINITIONS ::= BEGIN
     ...
   }
 
+  AKSendFirmwareReqMesv1 ::= SEQUENCE {
+    target OCTET STRING,
+    ...
+  }
+
   AKSendFirmwareRespMes ::= SEQUENCE {
     result AKInstallationResult,
     ...
@@ -112,9 +129,13 @@ IpUptane DEFINITIONS ::= BEGIN
     putMetaReq [4] AKPutMetaReqMes,
     putMetaResp [5] AKPutMetaRespMes,
     sendFirmwareReq [6] AKSendFirmwareReqMes,
-    sendFirmwareResp [7] AKSendFirmwareRespMes,
-    installReq [8] AKInstallReqMes,
-    installResp [9] AKInstallRespMes,
+    sendFirmwareReqv1 [7] AKSendFirmwareReqMesv1,
+    sendFirmwareResp [8] AKSendFirmwareRespMes,
+    installReq [9] AKInstallReqMes,
+    installResp [10] AKInstallRespMes,
+    notSupportedResp [11] AKNotSupportedRespMes,
+    downloadFileReq [12] AKDownloadFileReqMes,
+    downloadFileResp [13] AKDownloadFileRespMes,
     ...
   }
 

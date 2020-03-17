@@ -1068,6 +1068,7 @@ bool SotaUptaneClient::putManifestSimple(const Json::Value &custom) {
     manifest["custom"] = custom;
   }
   auto signed_manifest = uptane_manifest->sign(manifest);
+  LOG_INFO << "?????????????? Sending manifest...";
   HttpResponse response = http->put(config.uptane.director_server + "/manifest", signed_manifest);
   if (response.isOk()) {
     if (!connected) {
@@ -1281,27 +1282,34 @@ std::future<data::ResultCode::Numeric> SotaUptaneClient::sendFirmwareAsync(Uptan
     report_queue->enqueue(std_::make_unique<EcuInstallationStartedReport>(secondary.getSerial(), correlation_id));
 
     std::string data_to_send;
-    bool send_firmware_result = false;
+    //bool send_firmware_result = false;
 
-    if (target.IsOstree()) {
-      // empty firmware means OSTree secondaries: pack credentials instead
-      data_to_send = secondaryTreehubCredentials();
-    } else {
-      std::stringstream sstr;
-      sstr << *storage->openTargetFile(target);
-      data_to_send = sstr.str();
-    }
+//    if (target.IsOstree()) {
+//      // empty firmware means OSTree secondaries: pack credentials instead
+//      data_to_send = secondaryTreehubCredentials();
+//    } else {
+//      std::stringstream sstr;
+//      sstr << *storage->openTargetFile(target);
+//      data_to_send = sstr.str();
+//    }
 
-    if (!data_to_send.empty()) {
-      send_firmware_result = secondary.sendFirmware(data_to_send);
-    }
+//    if (!data_to_send.empty()) {
+//      send_firmware_result = secondary.sendFirmware(data_to_send);
+//    }
 
-    data::ResultCode::Numeric result =
-        send_firmware_result ? data::ResultCode::Numeric::kOk : data::ResultCode::Numeric::kInstallFailed;
+//    data::ResultCode::Numeric result =
+//        send_firmware_result ? data::ResultCode::Numeric::kOk : data::ResultCode::Numeric::kInstallFailed;
 
-    if (send_firmware_result) {
-      result = secondary.install(target.filename());
-    }
+    //if (send_firmware_result) {
+    auto custom_data = target.custom_data();
+     //sqldb_path_.parent_path() / "images"
+    Uptane::Target target_copy = target;
+
+    custom_data["target_abs_filepath"] = (config.storage.path / "images" / target.hashes()[0].HashString()).string();
+    target_copy.updateCustom(custom_data);
+
+     auto result = secondary.install(target_copy);
+    //}
 
     if (result == data::ResultCode::Numeric::kNeedCompletion) {
       report_queue->enqueue(std_::make_unique<EcuInstallationAppliedReport>(secondary.getSerial(), correlation_id));
